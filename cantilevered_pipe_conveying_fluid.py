@@ -18,6 +18,7 @@ from scipy import integrate      # for numerical integration
 import scipy.linalg as la        # for linear algebra operations
 import mpmath                    # for arbitrary-precision math library
 import control.matlab            # for state-space modelling and time response (can be installed using: pip install control)
+from celluloid import Camera     # for animation
 
 ''' Font size control abd global plot parameters '''
 SMALL_SIZE = 13
@@ -339,8 +340,8 @@ def normalizeModeShapes():
 
 class Response:
     
-    # Complete response
-    def response(q):
+    # Superposition of modes
+    def superpose(q):
         
         global xi # Domain description
         global N 
@@ -401,29 +402,63 @@ class Response:
         
         ### Solution reconstruction and plotting
         plt.ion()
-        fig, ax = plt.subplots(figsize=(15,10))
-        eta = np.zeros((len(xi),))
+        fig, ax = plt.subplots(2, 1, figsize=(10,15))
+        camera = Camera(fig) # initializing the camera
+
         for k in range(len(t)): 
-            
-            # Initialize to zero
-            #eta[:] = 0
-            
-            # Superposition of modes for displacement
-            for l in range(N):
-                eta += q[k, l]*ModeShape.phi(xi, l+1)
+                       
+            # # Superposition of modes for displacement and velocity
+            # # Initialize to zero
+            # eta[:] = 0
+            # for l in range(N):
+            #     eta += q[k, l]*ModeShape.phi(xi, l+1)
                  
-            plt.plot(xi, eta, color=colour[0], label='Displacement')
-            ax.set_xlim((0,1)); ax.set_ylim((-1,1))
-            ax.set_xlabel(r'$\xi$')
-            ax.set_ylabel(r'$\eta $')
-            ax.set_title(r'Time: %f' % t[k])
-            plt.legend(loc='best')
-            ax.grid()
+            # plt.plot(xi, Response.superpose(q[k, 0:N]), color=colour[0], label='Displacement')
+            # plt.plot(xi, Response.superpose(q[k, N:2*N]), color=colour[1], label='Velocity')
+            # ax.set_xlim((0,1)); ax.set_ylim((-1,1))
+            # ax.set_xlabel(r'$\xi$')
+            # ax.set_ylabel(r'$\eta $')
+            # ax.set_title(r'Time: %f' % t[k])
+            # plt.legend(loc='best')
+            # ax.grid()
+            # plt.pause(1.0/fps)
+            
+            
+            # Displacement
+            ax[0].plot(xi, Response.superpose(q[k, 0:N]), color=colour[0], label='Displacement')
+            ax[0].set_xlim((0,1)); ax[0].set_ylim((-0.4,0.4))
+            ax[0].set_ylabel(r'Displacement, $\eta $')
+            ax[0].text(0.15, 1.25, r'Dynamics of cantilevered pipe conveying fluid', transform=ax[0].transAxes, fontsize=MEDIUM_SIZE-3)
+            ax[0].text(0.05, 1.15, r'Parameters: $\beta$ = %.3f, $U$ = %.3f, $\alpha$ = %.3f, $\gamma$ = %.3f'% (beta_, U, alpha_, gamma_), transform=ax[0].transAxes, fontsize=MEDIUM_SIZE-3)
+            ax[0].text(0.4, 1.05, 'Time: %.5f'% t[k], transform=ax[0].transAxes, fontsize=MEDIUM_SIZE)
+            ax[0].grid('on')
+
+            # Velocity
+            ax[1].plot(xi, Response.superpose(q[k, N:2*N]), color=colour[1], label='Velocity')
+            ax[1].set_xlim((0,1)); ax[1].set_ylim((-1.0,1.0))
+            ax[1].set_xlabel(r'$\xi$')
+            ax[1].set_ylabel(r'Velocity, $\dot{\eta} $')
+            ax[1].grid('on')
+
+            # plt.legend(loc='best')
+            # plt.cla()
+            
+            # Capture the snapshot of the figure
+            camera.snap()
+
+            # Pause for the prescribed fps\
             plt.pause(1.0/fps)
-            plt.cla()
+
+            # Clear axes (comment it if camera is being used)
+            #ax[0].clear(); ax[1].clear()
         
+        # Create and save the animation to a file
+        animation = camera.animate()
+        animation.save('test.mp4')
+         
         #plt.show()
         plt.close()
+
         return None
     
 '''
@@ -635,7 +670,7 @@ N = 10
 U_array = np.linspace(0,15,200)
 
 ### Variation of complex frequencies with flow velocity U
-rootLocus(U_array)
+#rootLocus(U_array)
 
 '''
    Plotting COMPLETE response for a set of initial conditions
@@ -645,11 +680,11 @@ rootLocus(U_array)
 U = 1.0
 
 # Time array
-t = np.linspace(0,5,100)
+t = np.linspace(0,5, 20)
 
 # Defining initial conditions
 x0 = np.zeros((2*N, 1))
-x0[0:4] = 0.2*np.ones((4,1))
+x0[0:3] = 0.2*np.ones((3,1))
 
 # Plot dynamic response
 Response.plotResponse(t, x0, fps=5)
@@ -703,6 +738,7 @@ Coding references:
     5. https://www.c-sharpcorner.com/article/create-animated-gif-using-python-matplotlib/
     6. https://stackabuse.com/matplotlib-change-scatter-plot-marker-size/
     7. https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.solve_ivp.html#scipy.integrate.solve_ivp
+    8. https://github.com/jwkvam/celluloid (animation)
     
 '''
 
