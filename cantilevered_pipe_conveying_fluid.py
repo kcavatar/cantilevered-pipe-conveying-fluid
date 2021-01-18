@@ -9,7 +9,7 @@ AE255 Aeroelasticity term paper
 @author: G R Krishna Chand Avatar
 
 """
-###################### LOADING PACKAGES
+###################################### LOADING PACKAGES  ###########################################
 
 import os                        # for calling system functions in Ubuntu
 import numpy as np               # for Numerical Python library
@@ -19,6 +19,9 @@ import scipy.linalg as la        # for linear algebra operations
 import mpmath                    # for arbitrary-precision math library
 import control.matlab            # for state-space modelling and time response (can be installed using: pip install control)
 from celluloid import Camera     # for animation
+
+
+################################# Done LOADING PACKAGES  ###########################################
 
 ''' Font size control abd global plot parameters '''
 SMALL_SIZE = 13
@@ -403,30 +406,15 @@ class Response:
         ### Solution reconstruction and plotting
         plt.ion()
         fig, ax = plt.subplots(2, 1, figsize=(10,15))
-        camera = Camera(fig) # initializing the camera
+        #camera = Camera(fig) # initializing the camera
 
         for k in range(len(t)): 
                        
-            # # Superposition of modes for displacement and velocity
-            # # Initialize to zero
-            # eta[:] = 0
-            # for l in range(N):
-            #     eta += q[k, l]*ModeShape.phi(xi, l+1)
-                 
-            # plt.plot(xi, Response.superpose(q[k, 0:N]), color=colour[0], label='Displacement')
-            # plt.plot(xi, Response.superpose(q[k, N:2*N]), color=colour[1], label='Velocity')
-            # ax.set_xlim((0,1)); ax.set_ylim((-1,1))
-            # ax.set_xlabel(r'$\xi$')
-            # ax.set_ylabel(r'$\eta $')
-            # ax.set_title(r'Time: %f' % t[k])
-            # plt.legend(loc='best')
-            # ax.grid()
-            # plt.pause(1.0/fps)
-            
+            # ### Superposition of modes for displacement and velocity
             
             # Displacement
             ax[0].plot(xi, Response.superpose(q[k, 0:N]), color=colour[0], label='Displacement')
-            ax[0].set_xlim((0,1)); ax[0].set_ylim((-0.4,0.4))
+            ax[0].set_xlim((0,1)); ax[0].set_ylim((-1,1))
             ax[0].set_ylabel(r'Displacement, $\eta $')
             ax[0].text(0.15, 1.25, r'Dynamics of cantilevered pipe conveying fluid', transform=ax[0].transAxes, fontsize=MEDIUM_SIZE-3)
             ax[0].text(0.05, 1.15, r'Parameters: $\beta$ = %.3f, $U$ = %.3f, $\alpha$ = %.3f, $\gamma$ = %.3f'% (beta_, U, alpha_, gamma_), transform=ax[0].transAxes, fontsize=MEDIUM_SIZE-3)
@@ -444,23 +432,293 @@ class Response:
             # plt.cla()
             
             # Capture the snapshot of the figure
-            camera.snap()
+            #camera.snap()
 
             # Pause for the prescribed fps\
             plt.pause(1.0/fps)
 
             # Clear axes (comment it if camera is being used)
-            #ax[0].clear(); ax[1].clear()
+            ax[0].clear(); ax[1].clear()
         
         # Create and save the animation to a file
-        animation = camera.animate()
-        animation.save('test.mp4')
+        #animation = camera.animate()
+        #animation.save('test.mp4')
          
         #plt.show()
         plt.close()
 
         return None
+
+
+
+'''
+  
+   Class for ROOT LOCUS:  to determine variation of pole frequencies for a given set of parameters
+
+'''
+
+class RootLocus:
     
+    '''
+       Root locus function
+    '''
+    
+    def rootLocus(U_array, show_plot = 'No'):
+        
+        global N         # No of modes used for approximation
+        global xi        # Domain description
+        global beta_     # Mass ratio = (fluid)/(fluid + solid)
+        global gamma_    # Non-dimensionalized acceleration due to gravity
+        global alpha_    # Kelvin-Voigt viscoelasticity factor
+        global sigma_    # Non-dimensionalized external dissipation constant
+        
+        global U         # Non-dimensional flow velocity
+        
+        
+        ### Setting up damping matrix (C)  and stiffness matrix (K) 
+        # Equation: [I] \ddot{\vb{q}} + [C] \dot{\vb{q}} + [K] \vb{q} = \vb{0}
+        
+        C = np.zeros((N,N))
+        K = np.zeros((N,N))
+        
+        ### Real and imaginary parts of the eigenvalues
+        frequencyArray = np.zeros((N,U_array.size), dtype=np.complex64)
+        
+        ### State space form
+        # \ddot{\vb{x}} = [A] \vb{x}  where A = [zeros(N,N), identity(N,N); -K, -C]
+        # \vb{x} = {\vb{q} \\ \vb{z}},   \vb{z} = \dot{\vb{q}}
+        
+        A = np.zeros((2*N, 2*N))
+        A[0:N, N:2*N] = np.eye(N)
+        
+        for n in range(U_array.size):
+            
+            U = U_array[n]     # Non-dimensionalized flow velocity
+            
+            print("Processing U = %f" % U)
+            for i in range(N):
+                for j in range(N):
+                    K[i,j] = Coefficients.K(i+1,j+1)
+                    C[i,j] = Coefficients.C(i+1,j+1)
+            
+            # Populate K and C matrices into matrix A        
+            A[N:2*N, 0:N]  = -K
+            A[N:2*N, N:2*N] = -C
+            
+            ### Finding eigenvalues
+            eigvals, eigvecs = la.eig(A)
+            eigvals = -1.0j*eigvals
+            #print(eigvals)
+            
+            ### Record eigenvalues
+            if(n==0):
+                frequencyArray[:, n] = np.sort(eigvals[::2]) #np.reshape(eigvals[::2], (N,1))
+                
+            else:
+                # Order the eigenvalues according to nearest neighbours 
+                frequencyArray[:, n] = closestNeighbourMapping(frequencyArray[:, n-1], np.sort(eigvals[::2]))
+                
+        ### Plotting variation of complex frequency of lower modes for a particular value of beta_        
+        modes_to_plot = 4    # Number of modes to plot
+        legend = []          # Dynamically create legend
+        
+        plt.ion() # interactive mode on
+        fig, ax = plt.subplots(figsize=(15,10))
+        
+        for row in range(modes_to_plot):
+            plt.plot(np.real(frequencyArray[row, :]), np.imag(frequencyArray[row, :]), color=colour[row], lw=line_width, \
+                     label="Coupled mode "+ str(row + 1)) # marker=marker[row], 
+            legend += ["Coupled mode "+ str(row + 1)]
+                
+        ax.set_xlim((0,130)); ax.set_ylim((-20,30))
+        ax.set_xlabel(r'Real $(\omega)$')
+        ax.set_ylabel(r'Imag $(\omega)$')
+        ax.set_title(r'Variation of complex frequency with $U$ for $\beta$ = ' +  str(beta_))
+        ax.grid()
+        
+        # Adding flutter U to the plot
+        (flutterMode, flutterIndices, flutterVelocity) = RootLocus.determineFlutterSpeed(frequencyArray, U_array)
+        markers = ['*', 'd']
+    
+        if (len(flutterMode) != 0):
+            for k in range(len(flutterMode)):
+                legend += ["$U_{f," + str(flutterMode[k]) +"}$ = " + str("%.4f"%flutterVelocity[k])]
+                ax.scatter([frequencyArray[flutterMode[k] - 1, flutterIndices[k]].real], [0], s=150, marker=markers[k], color = 'red')
+    
+        # Adding U limits to the plot
+        for row in range(modes_to_plot):
+            ax.scatter(np.real(frequencyArray[row,0]), np.imag(frequencyArray[row,0]), s=150, \
+                   marker='o', color='black')
+            ax.scatter(np.real(frequencyArray[row,-1]), np.imag(frequencyArray[row,-1]), s=150, \
+                   marker='x', color='black')         
+        legend += ["$U$ = " + str(U_array[0]), "$U$ = " + str(U_array[-1])]
+        
+        #plt.legend(legend, bbox_to_anchor=(1,0), loc="lower left") #place legend in top right corner
+        #plt.legend(legend, bbox_to_anchor=(0, 1, 1, 0), loc="lower left", mode="expand", ncol=N) #place legend above plot
+        plt.legend(legend,loc="best") #place legend below plot
+        #plt.show()
+        figName = "rootLocus_beta_" + str(beta_) + "_alpha_" + str(alpha_) + "_gamma_" + str(gamma_) + "_sigma_" + str(sigma_) + ".png"
+        plt.savefig(figName, transparent = False, bbox_inches = 'tight', pad_inches = 0)
+        plt.close()
+    
+        if (show_plot == 'Yes'):
+           os.system('shotwell ' + figName + ' &')
+        
+        return None
+
+    '''
+      Determine flutter flow velocity : check when the imaginary part becomes negative and return the corresponding U
+      
+    '''
+    
+    def determineFlutterSpeed(freqArray, U_array):
+        
+        # Initialize
+        nModes, nIntervals = freqArray.shape
+        flutterVelocityArray = [-1]*nModes # Unphysical flow velocity
+        flutterIndices = []   # Indices corresponding to flutter for different modes
+        flutterMode = []
+        flutterVelocity = []
+        
+        # Check for sign changes in imaginary part of frequency from positive to negative
+        for i in range(nModes):
+            for j in range(1, nIntervals-1):
+                if (freqArray[i,j-1].imag >= 0 and freqArray[i,j+1].imag < 0):
+                    flutterVelocityArray[i] = U_array[j]
+                    flutterIndices += [j]
+                    flutterMode += [i + 1]
+                    flutterVelocity += [flutterVelocityArray[i]]
+                    break
+        
+        # print flutter flow velocity for different modes
+        if (len(flutterMode) != 0):
+    
+            print("*****************************************************")
+            print("   Flutter flow velocities for different modes ")
+            print("     ")
+            for i in range(len(flutterMode)):
+                print("   U_flutter = " + str(flutterVelocity[i]) + " for Mode " + str(flutterMode[i]))
+            print("*****************************************************")
+    
+        return (flutterMode, flutterIndices, flutterVelocity)
+
+'''
+ 
+   Class for Variation of critical velocity with beta :
+       Class to determine variation of critical flow velocity with mass ratio for a given set of parameters
+ 
+'''
+
+class CriticalVelocityVsBeta:
+
+    def criticalVelocityVsBeta(U_array, show_plot = 'No'):
+        
+        global N         # No of modes used for approximation
+        global xi        # Domain description
+        global beta_     # Mass ratio = (fluid)/(fluid + solid)
+        global gamma_    # Non-dimensionalized acceleration due to gravity
+        global alpha_    # Kelvin-Voigt viscoelasticity factor
+        global sigma_    # Non-dimensionalized external dissipation constant
+        global U         # Non-dimensional flow velocity
+    
+        ### Define beta array
+        beta_array = np.linspace(0.01,0.99,20) # excluding beta =  1 for ``stability'' sake
+        print(beta_array)
+        
+        ### Define flutter beta array
+        flutterBeta_array = np.zeros(U_array.shape)
+        
+        ### Setting up damping matrix (C)  and stiffness matrix (K) 
+        # Equation: [I] \ddot{\vb{q}} + [C] \dot{\vb{q}} + [K] \vb{q} = \vb{0}
+        
+        C = np.zeros((N,N))
+        K = np.zeros((N,N))
+        
+        ### Real and imaginary parts of the eigenvalues
+        frequencyArray = np.zeros((N,beta_array.size), dtype=np.complex64)
+        
+        ### State space form
+        # \ddot{\vb{x}} = [A] \vb{x}  where A = [zeros(N,N), identity(N,N); -K, -C]
+        # \vb{x} = {\vb{q} \\ \vb{z}},   \vb{z} = \dot{\vb{q}}
+        
+        A = np.zeros((2*N, 2*N))
+        A[0:N, N:2*N] = np.eye(N)
+        
+        for n in range(U_array.size):
+            
+            U = U_array[n]     # Non-dimensionalized flow velocity
+            
+            print("Processing U = %f" % U)
+            
+            for m in range(beta_array.size): 
+                
+                beta_ = beta_array[m] # Mass ratio 
+
+                for i in range(N):
+                    for j in range(N):
+                        K[i,j] = Coefficients.K(i+1,j+1)
+                        C[i,j] = Coefficients.C(i+1,j+1)
+                
+                # Populate K and C matrices into matrix A        
+                A[N:2*N, 0:N]  = -K
+                A[N:2*N, N:2*N] = -C
+                
+                ### Finding eigenvalues
+                eigvals, eigvecs = la.eig(A)
+                eigvals = -1.0j*eigvals
+                #print(eigvals)
+                
+                ### Record eigenvalues
+                if(n==0):
+                    frequencyArray[:, n] = np.sort(eigvals[::2]) # 2 indicates taking only one of the complex conjugates                    
+                else:
+                    # Order the eigenvalues according to nearest neighbours 
+                    frequencyArray[:, n] = closestNeighbourMapping(frequencyArray[:, n-1], np.sort(eigvals[::2]))
+                    
+            # beta_ for flutter
+            #print(frequencyArray)
+            flutterBeta = CriticalVelocityVsBeta.determineFlutterBeta(frequencyArray, beta_array)
+    
+            # Assign flutterBeta to flutterBeta_array
+            flutterBeta_array[n] = flutterBeta[0]
+    
+        print(flutterBeta_array)
+        return None
+
+
+    '''
+      Determine flutter flow velocity : check when the imaginary part becomes negative and return the corresponding U
+      
+    '''
+    
+    def determineFlutterBeta(freqArray, beta_array):
+        
+        # Initialize 
+        nModes, nIntervals = freqArray.shape
+        #flutterBetaArray = [-1]*nModes # Unphysical mass ratio
+        flutterIndices = []   # Indices corresponding to flutter for different modes
+        #flutterMode = []
+        flutterBeta = []
+        
+        # Check for sign changes in imaginary part of frequency from positive to negative
+        for i in range(nModes):
+            for j in range(1, nIntervals-1):
+                if ((freqArray[i,j-1].imag >= 0 and freqArray[i,j+1].imag < 0) or (freqArray[i,j+1].imag <= 0 and freqArray[i,j-1].imag > 0)) :
+                    flutterIndices += [j]
+                    #flutterMode += [i + 1]
+                    flutterBeta += [beta_array[j]]
+                    break
+        
+        # print flutter flow velocity for different modes
+        if (len(flutterBeta) != 0):
+            for i in range(1):
+                print("   beta = " + str(flutterBeta[i]) + " for U_flutter = " + str(U))
+            print("*****************************************************")
+    
+        return flutterBeta
+
+
+
 '''
 
     UTILITY FUNCTIONS
@@ -495,150 +753,11 @@ def closestNeighbourMapping(previous, current):
     	del(current[ind])
 
     return temp
-    
-'''
-  Determine flutter flow velocity : check when the imaginary part becomes negative and return the corresponding U
-  
-'''
-
-def determineFlutterSpeed(freqArray, U_array):
-    
-    # Initialize
-    nModes, nIntervals = freqArray.shape
-    flutterVelocityArray = [-1]*nModes # unphysical flow velocity
-    flutterIndices = []   # Indices corresponding to flutter for different modes
-    flutterMode = []
-    flutterVelocity = []
-    
-    # Check for sign changes in imaginary part of frequency from positive to negative
-    for i in range(nModes):
-        for j in range(1, nIntervals-1):
-            if (freqArray[i,j-1].real >= 0 and freqArray[i,j+1].imag < 0):
-                flutterVelocityArray[i] = U_array[j]
-                flutterIndices += [j]
-                flutterMode += [i]
-                flutterVelocity += [flutterVelocityArray[i]]
-                break
-    
-    # print flutter flow velocity for different modes
-    print("*****************************************************")
-    print("   Flutter flow velocities for different modes ")
-    print("     ")
-        
-    for i in range(nModes):
-        if (flutterVelocityArray[i] != -1):
-            print("   U_flutter = " + str(flutterVelocityArray[i]) + " for Mode " + str(i+1))
-    
-    print("*****************************************************")
-    return (flutterMode, flutterIndices, flutterVelocity)
 
 
-'''
-  
-   ROOT LOCUS:
-       Function to determine variation of pole frequencies for a given set of parameters
 
-'''
 
-def rootLocus(U_array):
-    
-    global N  # No of modes used for approximation
-    global xi  # Domain description
-    global beta_     # Mass ratio = (fluid)/(fluid + solid)
-    global gamma_    # Non-dimensionalized acceleration due to gravity
-    global alpha_    # Kelvin-Voigt viscoelasticity factor
-    global sigma_    # Non-dimensionalized external dissipation constant
-    
-    global U 
-    
-    
-    ### Setting up damping matrix (C)  and stiffness matrix (K) 
-    # Equation: [I] \ddot{\vb{q}} + [C] \dot{\vb{q}} + [K] \vb{q} = \vb{0}
-    
-    C = np.zeros((N,N))
-    K = np.zeros((N,N))
-    
-    ### Real and imaginary parts of the eigenvalues
-    frequencyArray = np.zeros((N,U_array.size), dtype=np.complex64)
-    
-    ### State space form
-    # \ddot{\vb{x}} = [A] \vb{x}  where A = [zeros(N,N), identity(N,N); -K, -C]
-    # \vb{x} = {\vb{q} \\ \vb{z}},   \vb{z} = \dot{\vb{q}}
-    
-    A = np.zeros((2*N, 2*N))
-    A[0:N, N:2*N] = np.eye(N)
-    
-    for n in range(U_array.size):
-        
-        U = U_array[n]     # Non-dimensionalized flow velocity
-        
-        print("Processing U = %f" % U)
-        for i in range(N):
-            for j in range(N):
-                K[i,j] = Coefficients.K(i+1,j+1)
-                C[i,j] = Coefficients.C(i+1,j+1)
-        
-        # Populate K and C matrices into matrix A        
-        A[N:2*N, 0:N]  = -K
-        A[N:2*N, N:2*N] = -C
-        
-        ### Finding eigenvalues
-        eigvals, eigvecs = la.eig(A)
-        eigvals = -1.0j*eigvals
-        #print(eigvals)
-        
-        ### Record eigenvalues
-        if(n==0):
-            frequencyArray[:, n] = np.sort(eigvals[::2]) #np.reshape(eigvals[::2], (N,1))
-            
-        else:
-            # Order the eigenvalues according to nearest neighbours 
-            frequencyArray[:, n] = closestNeighbourMapping(frequencyArray[:, n-1], np.sort(eigvals[::2]))
-            
-    ### Plotting variation of complex frequency of lower modes for a particular value of beta_        
-    modes_to_plot = 4    # Number of modes to plot
-    legend = []          # Dynamically create legend
-    
-    plt.ion() # interactive mode on
-    fig, ax = plt.subplots(figsize=(15,10))
-    
-    for row in range(modes_to_plot):
-        plt.plot(np.real(frequencyArray[row, :]), np.imag(frequencyArray[row, :]), color=colour[row], lw=line_width, \
-                 label="Coupled mode "+ str(row + 1)) # marker=marker[row], 
-        legend += ["Coupled mode "+ str(row + 1)]
-            
-    ax.set_xlim((0,130)); ax.set_ylim((-20,30))
-    ax.set_xlabel(r'Real $(\omega)$')
-    ax.set_ylabel(r'Imag $(\omega)$')
-    ax.set_title(r'Variation of complex frequency with $U$ for $\beta$ = ' +  str(beta_))
-    ax.grid()
-    
-    # Adding flutter U to the plot
-    (flutterMode, flutterIndices, flutterVelocity) = determineFlutterSpeed(frequencyArray, U_array)
-    markers = ['*', 'd']
-    if (len(flutterMode) != 0):
-        for k in range(len(flutterMode)):
-            legend += ["$U_{f," + str(flutterMode[k]) +"}$ = " + str("%.4f"%flutterVelocity[k])]
-            ax.scatter([frequencyArray[flutterMode[k], flutterIndices[k]].real], [0], s=150, marker=markers[k], color = 'red')
 
-    # Adding U limits to the plot
-    for row in range(modes_to_plot):
-        ax.scatter(np.real(frequencyArray[row,0]), np.imag(frequencyArray[row,0]), s=150, \
-               marker='o', color='black')
-        ax.scatter(np.real(frequencyArray[row,-1]), np.imag(frequencyArray[row,-1]), s=150, \
-               marker='x', color='black')         
-    legend += ["$U$ = " + str(U_array[0]), "$U$ = " + str(U_array[-1])]
-    
-    #plt.legend(legend, bbox_to_anchor=(1,0), loc="lower left") #place legend in top right corner
-    #plt.legend(legend, bbox_to_anchor=(0, 1, 1, 0), loc="lower left", mode="expand", ncol=N) #place legend above plot
-    plt.legend(legend,loc="best") #place legend below plot
-    #plt.show()
-    figName = "rootLocus_beta" + str(beta_) + "_alpha_" + str(alpha_) + "_gamma_" + str(gamma_) + "_sigma_" + str(sigma_) + ".png"
-    plt.savefig(figName, transparent = False, bbox_inches = 'tight', pad_inches = 0)
-    plt.close()
-    os.system('shotwell ' + figName + ' &')
-    
-    return None
 
 ''' 
     *******************************************************************************************************
@@ -670,24 +789,30 @@ N = 10
 U_array = np.linspace(0,15,200)
 
 ### Variation of complex frequencies with flow velocity U
-#rootLocus(U_array)
+#RootLocus.rootLocus(U_array, 'Yes')
+
+### Variation of critical flow velocity with mass ratio for a given set of parameters
+U_array = np.linspace(4.5,17,100)
+CriticalVelocityVsBeta.criticalVelocityVsBeta(U_array[:], 'Yes')
+
+
 
 '''
    Plotting COMPLETE response for a set of initial conditions
    
 '''
 
-U = 1.0
+U = 4.5
 
 # Time array
-t = np.linspace(0,5, 20)
+t = np.linspace(0,5, 100)
 
 # Defining initial conditions
 x0 = np.zeros((2*N, 1))
 x0[0:3] = 0.2*np.ones((3,1))
 
 # Plot dynamic response
-Response.plotResponse(t, x0, fps=5)
+#Response.plotResponse(t, x0, fps=5)
 
 ########### Test integrate
 
@@ -741,4 +866,3 @@ Coding references:
     8. https://github.com/jwkvam/celluloid (animation)
     
 '''
-
