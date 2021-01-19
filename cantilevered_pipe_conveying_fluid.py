@@ -622,8 +622,7 @@ class CriticalVelocityVsBeta:
         global U         # Non-dimensional flow velocity
     
         ### Define beta array
-        beta_array = np.linspace(0.01,0.99,20) # excluding beta =  1 for ``stability'' sake
-        print(beta_array)
+        beta_array = np.linspace(0.01,0.99,250) # excluding beta =  1 for ``stability'' sake
         
         ### Define flutter beta array
         flutterBeta_array = np.zeros(U_array.shape)
@@ -669,20 +668,52 @@ class CriticalVelocityVsBeta:
                 #print(eigvals)
                 
                 ### Record eigenvalues
-                if(n==0):
-                    frequencyArray[:, n] = np.sort(eigvals[::2]) # 2 indicates taking only one of the complex conjugates                    
+                if(m==0):
+                    frequencyArray[:, m] = np.sort(eigvals[::2]) # 2 indicates taking only one of the complex conjugates                    
                 else:
                     # Order the eigenvalues according to nearest neighbours 
-                    frequencyArray[:, n] = closestNeighbourMapping(frequencyArray[:, n-1], np.sort(eigvals[::2]))
+                    frequencyArray[:, m] = closestNeighbourMapping(frequencyArray[:, m-1], np.sort(eigvals[::2]))
                     
             # beta_ for flutter
-            #print(frequencyArray)
             flutterBeta = CriticalVelocityVsBeta.determineFlutterBeta(frequencyArray, beta_array)
     
             # Assign flutterBeta to flutterBeta_array
             flutterBeta_array[n] = flutterBeta[0]
     
-        print(flutterBeta_array)
+        ### Plotting variation of complex frequency of lower modes for a particular value of beta_        
+        legend = []          # Dynamically create legend
+        
+        plt.ion() # interactive mode on
+        fig, ax = plt.subplots(figsize=(7,16))
+        
+        plt.plot(flutterBeta_array, U_array, color=colour[0], lw=line_width, label=r"$\alpha = \gamma = \sigma = 0$") # marker=marker[row], 
+        #legend += ["Coupled mode "+ str(row + 1)]
+                
+        ax.set_xlim((0,1)); ax.set_ylim((4,18))
+        ax.set_xlabel(r'Mass ratio, $\beta$')
+        ax.set_ylabel(r'Critical flow velocity, $U_{cf}$')
+        #ax.set_title(r'Variation of dimensionless c $U_{cf}$ with $\beta$')
+        ax.grid()
+        plt.legend(loc='best')
+
+        plt.show()
+        plt.pause(5)
+
+        # Writing data to file and saving image
+        fileName = "criticalVelocityVsBeta_alpha_" + str(alpha_) + "_gamma_" + str(gamma_) + "_sigma_" + str(sigma_)
+        
+        with open(fileName + ".dat", 'w') as f1:
+        	f1.write('# flutter_beta   U_cf \n' )
+        	for k in range(len(U_array)):
+        		f1.write(str(flutterBeta_array[k]) + "    " + str(U_array[k])+"\n")
+
+
+        plt.savefig(fileName  + ".png", transparent = False, bbox_inches = 'tight', pad_inches = 0)
+        plt.close()
+    
+        if (show_plot == 'Yes'):
+           os.system('shotwell ' + fileName + '.png' + ' &')
+        
         return None
 
 
@@ -696,15 +727,15 @@ class CriticalVelocityVsBeta:
         # Initialize 
         nModes, nIntervals = freqArray.shape
         #flutterBetaArray = [-1]*nModes # Unphysical mass ratio
-        flutterIndices = []   # Indices corresponding to flutter for different modes
+        #flutterIndices = []   # Indices corresponding to flutter for different modes
         #flutterMode = []
         flutterBeta = []
         
         # Check for sign changes in imaginary part of frequency from positive to negative
         for i in range(nModes):
             for j in range(1, nIntervals-1):
-                if ((freqArray[i,j-1].imag >= 0 and freqArray[i,j+1].imag < 0) or (freqArray[i,j+1].imag <= 0 and freqArray[i,j-1].imag > 0)) :
-                    flutterIndices += [j]
+                if ((freqArray[i,j-1].imag >= 0 and freqArray[i,j+1].imag < 0) or (freqArray[i,j-1].imag < 0 and freqArray[i,j+1].imag >= 0)) :
+                    #flutterIndices += [j]
                     #flutterMode += [i + 1]
                     flutterBeta += [beta_array[j]]
                     break
@@ -713,7 +744,7 @@ class CriticalVelocityVsBeta:
         if (len(flutterBeta) != 0):
             for i in range(1):
                 print("   beta = " + str(flutterBeta[i]) + " for U_flutter = " + str(U))
-            print("*****************************************************")
+            #print("*****************************************************")
     
         return flutterBeta
 
@@ -792,7 +823,7 @@ U_array = np.linspace(0,15,200)
 #RootLocus.rootLocus(U_array, 'Yes')
 
 ### Variation of critical flow velocity with mass ratio for a given set of parameters
-U_array = np.linspace(4.5,17,100)
+U_array = np.linspace(4.3,17,100)
 CriticalVelocityVsBeta.criticalVelocityVsBeta(U_array[:], 'Yes')
 
 
