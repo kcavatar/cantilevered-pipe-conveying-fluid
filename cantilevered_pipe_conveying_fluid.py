@@ -305,14 +305,11 @@ class ModeShape:
     def identity(x, modeNo):
         return x
 
-
 '''
-  Values for MODAL FREQUENCIES for a cantilever beam
-  
   Function for NORMALIZATION of the MODAL SHAPES for the cantilever beam
   
 '''
-# Non-dimensional modal frequencies : \lambda 
+# Non-dimensional modal frequencies for a cantilever beam: \lambda 
 #     from Meirovitch's Fundamentals of vibrations (page no: 420)
 modalFreq = np.zeros(16)
 modalFreq[1] = 1.8751; modalFreq[2] = 4.69409; modalFreq[3] = 7.85476; modalFreq[4] = 10.9955; modalFreq[5] = 14.1372;
@@ -334,8 +331,6 @@ def normalizeModeShapes():
 
 # Normalize modes compulsarily before computations are done
 #normalizeModeShapes()
-
-
 
 '''
    Class for complete response
@@ -684,7 +679,7 @@ class CriticalVelocityVsBeta:
         legend = []          # Dynamically create legend
         
         plt.ion() # interactive mode on
-        fig, ax = plt.subplots(figsize=(7,16))
+        fig, ax = plt.subplots(figsize=(9,18))
         
         plt.plot(flutterBeta_array, U_array, color=colour[0], lw=line_width, label=r"$\alpha = \gamma = \sigma = 0$") # marker=marker[row], 
         #legend += ["Coupled mode "+ str(row + 1)]
@@ -694,6 +689,7 @@ class CriticalVelocityVsBeta:
         ax.set_ylabel(r'Critical flow velocity, $U_{cf}$')
         #ax.set_title(r'Variation of dimensionless c $U_{cf}$ with $\beta$')
         ax.grid()
+        ax.set_xticks(0.1*np.arange(11))
         plt.legend(loc='best')
 
         plt.show()
