@@ -351,7 +351,7 @@ class Response:
         return res
     
     # Plot response
-    def plotResponse(t, x0, fps=10):  # fps = frames per second
+    def plotResponse(t, displacement_ic, velocity_ic, fps=10):  # fps = frames per second
         
         global N  # No of modes used for approximation
         global xi  # Domain description
@@ -359,9 +359,20 @@ class Response:
         global gamma_    # Non-dimensionalized acceleration due to gravity
         global alpha_    # Kelvin-Voigt viscoelasticity factor
         global sigma_    # Non-dimensionalized external dissipation constant
-        
         global U 
-        
+
+        ### Projecting initial conditions on the Galerkin modes
+        x0 = np.zeros((2*N, 1)) 
+        # x0[0:3] = 0.2*np.ones((3,1))
+
+        # Projecting displacement
+        for n in range(N):
+        	x0[n] = Integrator.numericalIntegration(displacement_ic*ModeShape.phi(xi, n+1), xi, scheme = 'simps')
+
+        # Projecting velocity
+        for n in range(N):
+        	x0[n + N] = Integrator.numericalIntegration(velocity_ic*ModeShape.phi(xi, n+1), xi, scheme = 'simps')
+
         ### Setting up damping matrix (C)  and stiffness matrix (K) 
         # Equation: [I] \ddot{\vb{q}} + [C] \dot{\vb{q}} + [K] \vb{q} = \vb{0}
         C = np.zeros((N,N))
@@ -409,10 +420,11 @@ class Response:
             
             # Displacement
             ax[0].plot(xi, Response.superpose(q[k, 0:N]), color=colour[0], label='Displacement')
-            ax[0].set_xlim((0,1)); ax[0].set_ylim((-1,1))
+            ax[0].set_xlim((0,1)); ax[0].set_ylim((-0.4,0.4))
             ax[0].set_ylabel(r'Displacement, $\eta $')
             ax[0].text(0.15, 1.25, r'Dynamics of cantilevered pipe conveying fluid', transform=ax[0].transAxes, fontsize=MEDIUM_SIZE-3)
-            ax[0].text(0.05, 1.15, r'Parameters: $\beta$ = %.3f, $U$ = %.3f, $\alpha$ = %.3f, $\gamma$ = %.3f'% (beta_, U, alpha_, gamma_), transform=ax[0].transAxes, fontsize=MEDIUM_SIZE-3)
+            ax[0].text(0.0, 1.15, r'Parameters: $\beta$ = %.3f, $U$ = %.3f, $\alpha$ = %.3f, $\gamma$ = %.3f, $\sigma$ = %.3f'% (beta_, U, alpha_, gamma_, sigma_), \
+                       transform=ax[0].transAxes, fontsize=MEDIUM_SIZE-3)
             ax[0].text(0.4, 1.05, 'Time: %.5f'% t[k], transform=ax[0].transAxes, fontsize=MEDIUM_SIZE)
             ax[0].grid('on')
 
@@ -616,8 +628,14 @@ class CriticalVelocityVsBeta:
         global sigma_    # Non-dimensionalized external dissipation constant
         global U         # Non-dimensional flow velocity
     
+
+        ### Print what is being done
+        print("*** Determining  variation of critical  flow velocity vs mass ratio ***")    
+        print('Parameters: gamma = %.3f, alpha = %.3f, sigma = %.3f'% (gamma_, alpha_, sigma_)) 
+        print("   ")
+
         ### Define beta array
-        beta_array = np.linspace(0.01,0.99,250) # excluding beta =  1 for ``stability'' sake
+        beta_array = np.linspace(0.0,0.99,250) # excluding beta =  1 for ``stability'' sake
         
         ### Define flutter beta array
         flutterBeta_array = np.zeros(U_array.shape)
@@ -681,16 +699,15 @@ class CriticalVelocityVsBeta:
         plt.ion() # interactive mode on
         fig, ax = plt.subplots(figsize=(9,18))
         
-        plt.plot(flutterBeta_array, U_array, color=colour[0], lw=line_width, label=r"$\alpha = \gamma = \sigma = 0$") # marker=marker[row], 
-        #legend += ["Coupled mode "+ str(row + 1)]
-                
-        ax.set_xlim((0,1)); ax.set_ylim((4,18))
+        plt.plot(flutterBeta_array, U_array, color=colour[0], lw=line_width) #, label=r"$\alpha = \gamma = \sigma = 0$")
+        plt.title(r'$\gamma$ = %.3f, $\alpha$ = %.3f, $\sigma$ = %.3f'% (gamma_, alpha_, sigma_))	    
+        ax.set_xlim((0,1)); ax.set_ylim((0,np.ceil(U_array[-1]) + 1))
         ax.set_xlabel(r'Mass ratio, $\beta$')
         ax.set_ylabel(r'Critical flow velocity, $U_{cf}$')
         #ax.set_title(r'Variation of dimensionless c $U_{cf}$ with $\beta$')
         ax.grid()
         ax.set_xticks(0.1*np.arange(11))
-        plt.legend(loc='best')
+        #plt.legend(loc='best')
 
         plt.show()
         plt.pause(5)
@@ -807,7 +824,7 @@ sigma_  = 0.0       # Non-dimensionalized external dissipation constant
 U       = 0.      # Non-dimensional flow velocity
 
 ### Domain discretization
-xi = np.linspace(0, 1, 1000)
+xi = np.linspace(0, 1, 501)
 
 ### Number of modes for Galerkin approximation
 N = 10
@@ -819,8 +836,8 @@ U_array = np.linspace(0,15,200)
 #RootLocus.rootLocus(U_array, 'Yes')
 
 ### Variation of critical flow velocity with mass ratio for a given set of parameters
-U_array = np.linspace(4.3,17,100)
-CriticalVelocityVsBeta.criticalVelocityVsBeta(U_array[:], 'Yes')
+U_array = np.linspace(4.2,18,100)
+#CriticalVelocityVsBeta.criticalVelocityVsBeta(U_array[:], 'Yes')
 
 
 
@@ -829,17 +846,17 @@ CriticalVelocityVsBeta.criticalVelocityVsBeta(U_array[:], 'Yes')
    
 '''
 
-U = 4.5
+U = 0.5
 
 # Time array
 t = np.linspace(0,5, 100)
 
 # Defining initial conditions
-x0 = np.zeros((2*N, 1))
-x0[0:3] = 0.2*np.ones((3,1))
+displacement_ic = 0.1*ModeShape.phi(xi, 1) 
+velocity_ic = np.zeros(xi.shape)
 
 # Plot dynamic response
-#Response.plotResponse(t, x0, fps=5)
+Response.plotResponse(t, displacement_ic, velocity_ic, fps=5)
 
 ########### Test integrate
 
