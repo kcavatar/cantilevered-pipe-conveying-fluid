@@ -363,7 +363,6 @@ class Response:
 
         ### Projecting initial conditions on the Galerkin modes
         x0 = np.zeros((2*N, 1)) 
-        # x0[0:3] = 0.2*np.ones((3,1))
 
         # Projecting displacement
         for n in range(N):
@@ -371,7 +370,7 @@ class Response:
 
         # Projecting velocity
         for n in range(N):
-        	x0[n + N] = Integrator.numericalIntegration(velocity_ic*ModeShape.phi(xi, n+1), xi, scheme = 'simps')
+        	x0[n + N] = Integrator.numericalIntegration(velocity_ic*ModeShape.phi(xi, n+1), xi, scheme = 'simps') #0.2*ModeShape.phi(1.0, n+1)
 
         ### Setting up damping matrix (C)  and stiffness matrix (K) 
         # Equation: [I] \ddot{\vb{q}} + [C] \dot{\vb{q}} + [K] \vb{q} = \vb{0}
@@ -393,10 +392,6 @@ class Response:
         A[N:2*N, N:2*N] = -C
         
         B = np.zeros((2*N, 1))
-        
-        # C = np.zeros((N, 2*N))
-        # C[0:N, 0:N] = np.eye(N)
-        # C[0:N, N:2*N] =  np.zeros((N,N))
         
         C = np.eye(2*N)
 
@@ -470,7 +465,7 @@ class RootLocus:
        Root locus function
     '''
     
-    def rootLocus(U_array, show_plot = 'No'):
+    def rootLocus(U_array, modes_to_plot = 4, show_plot = 'No', returnEigenvalues = 'No'):  # modes_to_plot: Number of modes to plot
         
         global N         # No of modes used for approximation
         global xi        # Domain description
@@ -478,9 +473,13 @@ class RootLocus:
         global gamma_    # Non-dimensionalized acceleration due to gravity
         global alpha_    # Kelvin-Voigt viscoelasticity factor
         global sigma_    # Non-dimensionalized external dissipation constant
-        
         global U         # Non-dimensional flow velocity
         
+
+        ### Print what is being done
+        print("*** Determining  variation of complex frequency with flow velocity ***")    
+        print('Parameters: beta = %.3f, gamma = %.3f, alpha = %.3f, sigma = %.3f'% (beta_, gamma_, alpha_, sigma_)) 
+        print("   ")
         
         ### Setting up damping matrix (C)  and stiffness matrix (K) 
         # Equation: [I] \ddot{\vb{q}} + [C] \dot{\vb{q}} + [K] \vb{q} = \vb{0}
@@ -519,14 +518,17 @@ class RootLocus:
             
             ### Record eigenvalues
             if(n==0):
-                frequencyArray[:, n] = np.sort(eigvals[::2]) #np.reshape(eigvals[::2], (N,1))
+                if(alpha_ == 0.0):
+                    frequencyArray[:, n] = np.sort(eigvals[::2]) #np.reshape(eigvals[::2], (N,1))
+                else:
+                    frequencyArray[:, n] = np.sort(np.abs(eigvals[::2])) #np.reshape(eigvals[::2], (N,1))
+
                 
             else:
                 # Order the eigenvalues according to nearest neighbours 
                 frequencyArray[:, n] = closestNeighbourMapping(frequencyArray[:, n-1], np.sort(eigvals[::2]))
                 
         ### Plotting variation of complex frequency of lower modes for a particular value of beta_        
-        modes_to_plot = 4    # Number of modes to plot
         legend = []          # Dynamically create legend
         
         plt.ion() # interactive mode on
@@ -540,12 +542,12 @@ class RootLocus:
         ax.set_xlim((0,130)); ax.set_ylim((-20,30))
         ax.set_xlabel(r'Real $(\omega)$')
         ax.set_ylabel(r'Imag $(\omega)$')
-        ax.set_title(r'Variation of complex frequency with $U$ for $\beta$ = ' +  str(beta_))
+        ax.set_title(r'Parameters: $\beta$ = %.3f, $\gamma$ = %.3f, $\alpha$ = %.3f, $\sigma$ = %.3f'% (beta_, gamma_, alpha_, sigma_))
         ax.grid()
         
         # Adding flutter U to the plot
         (flutterMode, flutterIndices, flutterVelocity) = RootLocus.determineFlutterSpeed(frequencyArray, U_array)
-        markers = ['*', 'd']
+        markers = ['*', 'd', '+']
     
         if (len(flutterMode) != 0):
             for k in range(len(flutterMode)):
@@ -570,8 +572,13 @@ class RootLocus:
     
         if (show_plot == 'Yes'):
            os.system('shotwell ' + figName + ' &')
-        
-        return None
+
+
+        if (returnEigenvalues == 'Yes'):
+            return frequencyArray
+
+        else:  
+            return None
 
     '''
       Determine flutter flow velocity : check when the imaginary part becomes negative and return the corresponding U
@@ -616,9 +623,9 @@ class RootLocus:
  
 '''
 
-class CriticalVelocityVsBeta:
+class FlutterVelocityVsBeta:
 
-    def criticalVelocityVsBeta(U_array, show_plot = 'No'):
+    def flutterVelocityVsBeta(U_array, show_plot = 'No', show_omega = 'No'):
         
         global N         # No of modes used for approximation
         global xi        # Domain description
@@ -630,15 +637,18 @@ class CriticalVelocityVsBeta:
     
 
         ### Print what is being done
-        print("*** Determining  variation of critical  flow velocity vs mass ratio ***")    
+        print("*** Determining  variation of flutter flow velocity vs mass ratio ***")    
         print('Parameters: gamma = %.3f, alpha = %.3f, sigma = %.3f'% (gamma_, alpha_, sigma_)) 
         print("   ")
 
         ### Define beta array
-        beta_array = np.linspace(0.0,0.99,250) # excluding beta =  1 for ``stability'' sake
+        beta_array = np.linspace(0.00000,0.99,300) # excluding beta =  1 for ``stability'' sake
         
         ### Define flutter beta array
         flutterBeta_array = np.zeros(U_array.shape)
+
+        ### Define flutter omega array
+        flutterOmega_array = np.zeros(U_array.shape)
         
         ### Setting up damping matrix (C)  and stiffness matrix (K) 
         # Equation: [I] \ddot{\vb{q}} + [C] \dot{\vb{q}} + [K] \vb{q} = \vb{0}
@@ -688,37 +698,52 @@ class CriticalVelocityVsBeta:
                     frequencyArray[:, m] = closestNeighbourMapping(frequencyArray[:, m-1], np.sort(eigvals[::2]))
                     
             # beta_ for flutter
-            flutterBeta = CriticalVelocityVsBeta.determineFlutterBeta(frequencyArray, beta_array)
+            (flutterBeta, flutterOmega) = FlutterVelocityVsBeta.determineFlutterBeta(frequencyArray, beta_array)
     
             # Assign flutterBeta to flutterBeta_array
             flutterBeta_array[n] = flutterBeta[0]
+
+            # Assign flutterOmega to flutterOmega_array
+            flutterOmega_array[n] = flutterOmega[0]
     
         ### Plotting variation of complex frequency of lower modes for a particular value of beta_        
         legend = []          # Dynamically create legend
         
         plt.ion() # interactive mode on
         fig, ax = plt.subplots(figsize=(9,18))
-        
-        plt.plot(flutterBeta_array, U_array, color=colour[0], lw=line_width) #, label=r"$\alpha = \gamma = \sigma = 0$")
-        plt.title(r'$\gamma$ = %.3f, $\alpha$ = %.3f, $\sigma$ = %.3f'% (gamma_, alpha_, sigma_))	    
+
+        plt.title(r'$\gamma$ = %.3f, $\alpha$ = %.3f, $\sigma$ = %.3f'% (gamma_, alpha_, sigma_))       
         ax.set_xlim((0,1)); ax.set_ylim((0,np.ceil(U_array[-1]) + 1))
         ax.set_xlabel(r'Mass ratio, $\beta$')
-        ax.set_ylabel(r'Critical flow velocity, $U_{cf}$')
-        #ax.set_title(r'Variation of dimensionless c $U_{cf}$ with $\beta$')
-        ax.grid()
+        ax.set_ylabel(r'Flutter flow velocity, $U_{f}$')
+        ax.plot(flutterBeta_array, U_array, color='black', lw=line_width) #, label=r"$\alpha = \gamma = \sigma = 0$")
+        ax.tick_params(axis='y')
+        ax.grid(True)
         ax.set_xticks(0.1*np.arange(11))
+
+        ## Plot critical omega on the same figure
+        if (show_omega == 'Yes'):
+            ax.grid(False)
+            ax2 = ax.twinx()  # instantiate a second axes that shares the same x-axis
+            ax2.set_ylabel(r'Flutter frequency, $\omega_{f}$', color=colour[1])
+            ax2.plot(flutterBeta_array, flutterOmega_array, color=colour[1], lw=line_width) #, label=r"$\alpha = \gamma = \sigma = 0$")
+            ax2.tick_params(axis='y', labelcolor=colour[1])
+        
+        #ax.set_title(r'Variation of dimensionless c $U_{cf}$ with $\beta$')
         #plt.legend(loc='best')
+
+        fig.tight_layout() # otherwise the right y-label is slightly clipped
 
         plt.show()
         plt.pause(5)
 
         # Writing data to file and saving image
-        fileName = "criticalVelocityVsBeta_alpha_" + str(alpha_) + "_gamma_" + str(gamma_) + "_sigma_" + str(sigma_)
+        fileName = "flutterVelocityVsBeta_alpha_" + str(alpha_) + "_gamma_" + str(gamma_) + "_sigma_" + str(sigma_)
         
         with open(fileName + ".dat", 'w') as f1:
-        	f1.write('# flutter_beta   U_cf \n' )
-        	for k in range(len(U_array)):
-        		f1.write(str(flutterBeta_array[k]) + "    " + str(U_array[k])+"\n")
+            f1.write('# U_f flutter_beta   flutter_omega\n' )
+            for k in range(len(U_array)):
+                f1.write(str(U_array[k]) + "    " + str(flutterBeta_array[k]) + "    " + str(flutterOmega_array[k]) + "\n")
 
 
         plt.savefig(fileName  + ".png", transparent = False, bbox_inches = 'tight', pad_inches = 0)
@@ -726,7 +751,32 @@ class CriticalVelocityVsBeta:
     
         if (show_plot == 'Yes'):
            os.system('shotwell ' + fileName + '.png' + ' &')
+
+        # # Flutter Omega
+        # plt.ion() # interactive mode on
+        # fig, ax = plt.subplots(figsize=(9,18))
         
+        # plt.plot(flutterOmega_array, U_array, color=colour[0], lw=line_width) #, label=r"$\alpha = \gamma = \sigma = 0$")
+        # plt.title(r'$\gamma$ = %.3f, $\alpha$ = %.3f, $\sigma$ = %.3f'% (gamma_, alpha_, sigma_))       
+        # #ax.set_xlim((0,1)); 
+        # ax.set_ylim((0,np.ceil(U_array[-1]) + 1))
+        # ax.set_xlabel(r'Critical frequency, $\omega_c$')
+        # ax.set_ylabel(r'Critical flow velocity, $U_{cf}$')
+        # #ax.set_title(r'Variation of dimensionless c $U_{cf}$ with $\beta$')
+        # ax.grid()
+        # #ax.set_xticks(0.1*np.arange(11))
+        # #plt.legend(loc='best')
+
+        # plt.show()
+        # plt.pause(5)
+        # # Writing data to file and saving image
+        # fileName = "flutterVelocityVsOmega_alpha_" + str(alpha_) + "_gamma_" + str(gamma_) + "_sigma_" + str(sigma_)
+        # plt.savefig(fileName  + ".png", transparent = False, bbox_inches = 'tight', pad_inches = 0)
+        # plt.close()
+    
+        # if (show_plot == 'Yes'):
+        #    os.system('shotwell ' + fileName + '.png' + ' &')
+       
         return None
 
 
@@ -743,6 +793,7 @@ class CriticalVelocityVsBeta:
         #flutterIndices = []   # Indices corresponding to flutter for different modes
         #flutterMode = []
         flutterBeta = []
+        flutterOmega = []
         
         # Check for sign changes in imaginary part of frequency from positive to negative
         for i in range(nModes):
@@ -751,6 +802,7 @@ class CriticalVelocityVsBeta:
                     #flutterIndices += [j]
                     #flutterMode += [i + 1]
                     flutterBeta += [beta_array[j]]
+                    flutterOmega += [freqArray[i,j].real]
                     break
         
         # print flutter flow velocity for different modes
@@ -759,7 +811,7 @@ class CriticalVelocityVsBeta:
                 print("   beta = " + str(flutterBeta[i]) + " for U_flutter = " + str(U))
             #print("*****************************************************")
     
-        return flutterBeta
+        return (flutterBeta, flutterOmega)
 
 
 
@@ -799,8 +851,41 @@ def closestNeighbourMapping(previous, current):
     return temp
 
 
+'''
+   Plot variation of beta v/s flutter flow velocity with gamma (gravitational parameter)
 
+'''
 
+def plotBetaVsVelocity():
+
+    global sigma_
+    global alpha_
+
+    plt.ion() # interactive mode on
+    fig, ax = plt.subplots(figsize=(9,18))
+
+    gamma_ = [0.0, 10.0, 100.0]
+
+    for i in range(len(gamma_)):
+        fileName = "flutterVelocityVsBeta_alpha_" + str(alpha_) + "_gamma_" + str(gamma_[i]) + "_sigma_" + str(sigma_)
+        data = np.loadtxt(fileName + '.dat', skiprows=1, delimiter='    ')
+        #data = np.loadtxt(fileName, skiprows=1, delimiter=',')
+        ax.plot(data[:,1], data[:,0], color=colour[i], lw=line_width, label=r"$\gamma = %.1f$"%gamma_[i])
+    
+    plt.title(r'$\alpha$ = %.3f, $\sigma$ = %.3f'% (alpha_, sigma_))       
+    ax.set_xlim((0,1)); ax.set_ylim((0,24))
+    ax.set_xlabel(r'Mass ratio, $\beta$')
+    ax.set_ylabel(r'Flutter flow velocity, $U_{f}$')
+    plt.legend(loc='best')
+    ax.grid(True)
+    ax.set_xticks(0.1*np.arange(11))
+    plt.pause(2)
+
+    plt.savefig("flutterVelocityVsBeta_various_gamma.png", transparent = False, bbox_inches = 'tight', pad_inches = 0)
+
+    plt.close()
+
+    return None
 
 
 ''' 
@@ -817,10 +902,10 @@ def closestNeighbourMapping(previous, current):
 '''
 
 ### Parameters
-beta_   = 0.2     # Mass ratio = (fluid)/(fluid + solid)
-gamma_  = 0.0      # Non-dimensionalized acceleration due to gravity
-alpha_  = 0.0      # Kelvin-Voigt viscoelasticity factor
-sigma_  = 0.0       # Non-dimensionalized external dissipation constant
+beta_   = 0.1     # Mass ratio = (fluid)/(fluid + solid)
+gamma_  = 10.0     # Non-dimensionalized acceleration due to gravity
+alpha_  = 0.0     # Kelvin-Voigt viscoelasticity factor
+sigma_  = 10.0       # Non-dimensionalized external dissipation constant
 U       = 0.      # Non-dimensional flow velocity
 
 ### Domain discretization
@@ -830,15 +915,19 @@ xi = np.linspace(0, 1, 501)
 N = 10
 
 ### Non-dimensionalized flow velocity array
-U_array = np.linspace(0,15,200)
+U_array = np.linspace(0,15,300)
+#U_array = np.zeros((1,))
 
 ### Variation of complex frequencies with flow velocity U
-#RootLocus.rootLocus(U_array, 'Yes')
+RootLocus.rootLocus(U_array, modes_to_plot = 4, show_plot ='Yes')
 
-### Variation of critical flow velocity with mass ratio for a given set of parameters
-U_array = np.linspace(4.2,18,100)
-#CriticalVelocityVsBeta.criticalVelocityVsBeta(U_array[:], 'Yes')
+### Variation of flutter flow velocity with mass ratio for a given set of parameters
+U_array = np.linspace(4.0,17,200)
+#FlutterVelocityVsBeta.flutterVelocityVsBeta(U_array[:], show_plot='Yes', show_omega = 'No')
 
+
+### Variation of flutter flow velocity with mass ratio for different gamma_
+#plotBetaVsVelocity()
 
 
 '''
@@ -846,17 +935,24 @@ U_array = np.linspace(4.2,18,100)
    
 '''
 
+# Non-dimensional flow velocity
 U = 0.5
 
 # Time array
-t = np.linspace(0,5, 100)
+t = np.linspace(0, 10, 200)
 
 # Defining initial conditions
-displacement_ic = 0.1*ModeShape.phi(xi, 1) 
+displacement_ic = np.zeros(xi.shape) # 0.1*ModeShape.phi(xi, 1) 
 velocity_ic = np.zeros(xi.shape)
+velocity_ic[-1] = 0.2
 
 # Plot dynamic response
-Response.plotResponse(t, displacement_ic, velocity_ic, fps=5)
+#Response.plotResponse(t, displacement_ic, velocity_ic, fps=5)
+
+
+
+
+
 
 ########### Test integrate
 
@@ -908,5 +1004,6 @@ Coding references:
     6. https://stackabuse.com/matplotlib-change-scatter-plot-marker-size/
     7. https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.solve_ivp.html#scipy.integrate.solve_ivp
     8. https://github.com/jwkvam/celluloid (animation)
+    9. https://matplotlib.org/gallery/api/two_scales.html (two vertical axes for one horizontal axis)
     
 '''
