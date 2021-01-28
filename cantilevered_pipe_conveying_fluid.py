@@ -45,7 +45,7 @@ line_width = 2
 line_style = ['--', '-.', '-']
 marker = ['*', 'd', 'o', '+']
 legend = ["Coarse", "Medium", "Fine"] 
-colour = ["red", "blue", "green", "magenta"]
+colour = ["red", "blue", "green", "magenta", "pink"]
 
 '''
 Class to perform integration for various coefficients 
@@ -125,7 +125,7 @@ numIntegrationPoints = 2**8 + 1 # number of integration points
 
 class Coefficients:
     
-    global modalFreq
+    global modalEig
     global normalizationFactor
     global numIntegrationPoints # number of integration points
     
@@ -142,7 +142,7 @@ class Coefficients:
                 return 1
             else:
                 return 0
-        return (sigma_ + alpha_ * modalFreq[j]**4)*kronecker(i, j) + 2.0*np.sqrt(beta_)*U*Coefficients.b(i, j)
+        return (sigma_ + alpha_ * modalEig[j]**4)*kronecker(i, j) + 2.0*np.sqrt(beta_)*U*Coefficients.b(i, j)
     
     # K_{ij} = \lambda_j^4 \delta_{ij} + (U^2 - \gamma) c_{ij} + \gamma (d_{ij} + b_{ij})
     def K(i, j):
@@ -155,14 +155,14 @@ class Coefficients:
                 return 1
             else:
                 return 0
-        return modalFreq[j]**4 * kronecker(i, j) + (U**2 - gamma_)*Coefficients.c(i, j) + gamma_*(Coefficients.d(i, j) + Coefficients.b(i, j))
+        return modalEig[j]**4 * kronecker(i, j) + (U**2 - gamma_)*Coefficients.c(i, j) + gamma_*(Coefficients.d(i, j) + Coefficients.b(i, j))
     
     # b_{ij} = \int_0^1 \phi_i \phi'_j d\xi
     def b(i, j):
         #return Integrator.integrateTwoFunc(ModeShape.phi, ModeShape.dPhi, i, j)
         # Exact expressions
         if(i!=j):
-            return 4.0/((modalFreq[i]/modalFreq[j])**2 + (-1)**(i+j))
+            return 4.0/((modalEig[i]/modalEig[j])**2 + (-1)**(i+j))
         else:
             return 2.0
     
@@ -174,9 +174,9 @@ class Coefficients:
         sigma = lambda x: (np.sinh(x) - np.sin(x))/(np.cosh(x) + np.cos(x))
         
         if(i!=j):
-            return 4.0*(modalFreq[j]*sigma(modalFreq[j]) - modalFreq[i]*sigma(modalFreq[i]))/((-1.0)**(i+j) - (modalFreq[i]/modalFreq[j])**2)
+            return 4.0*(modalEig[j]*sigma(modalEig[j]) - modalEig[i]*sigma(modalEig[i]))/((-1.0)**(i+j) - (modalEig[i]/modalEig[j])**2)
         else:
-            return modalFreq[j]*sigma(modalFreq[j])*(2.0 - modalFreq[i]*sigma(modalFreq[i]))
+            return modalEig[j]*sigma(modalEig[j])*(2.0 - modalEig[i]*sigma(modalEig[i]))
   
     # d_{ij} = \int_0^1 \xi \phi_i \phi''_j d\xi
     def d(i, j):
@@ -186,11 +186,11 @@ class Coefficients:
         sigma = lambda x: (np.sinh(x) - np.sin(x))/(np.cosh(x) + np.cos(x))
         
         if(i!=j):
-            val = 4.0*(modalFreq[j]*sigma(modalFreq[j]) - modalFreq[i]*sigma(modalFreq[i]) + 2.0)/(1.0 - (modalFreq[i]/modalFreq[j])**4)*(-1)**(i+j)
-            val -= (3.0 + (modalFreq[i]/modalFreq[j])**4)/(1.0 - (modalFreq[i]/modalFreq[j])**4)*Coefficients.b(i,j) 
+            val = 4.0*(modalEig[j]*sigma(modalEig[j]) - modalEig[i]*sigma(modalEig[i]) + 2.0)/(1.0 - (modalEig[i]/modalEig[j])**4)*(-1)**(i+j)
+            val -= (3.0 + (modalEig[i]/modalEig[j])**4)/(1.0 - (modalEig[i]/modalEig[j])**4)*Coefficients.b(i,j) 
             return val
         else:
-            return modalFreq[j]*sigma(modalFreq[j])*(2.0 - modalFreq[i]*sigma(modalFreq[i]))/2.0 # c_{ii}/2
+            return modalEig[j]*sigma(modalEig[j])*(2.0 - modalEig[i]*sigma(modalEig[i]))/2.0 # c_{ii}/2
     
     ## \alpha_{ijkl}
     def alpha(i, j, k, l):
@@ -262,44 +262,44 @@ Class for mode shapes and their derivatives
 
 class ModeShape:
     
-    global modalFreq
+    global modalEig
     global normalizationFactor
     
     # \phi (x) to be normalized
     def normalizePhi(x, modeNo):
-        sigma = (np.sinh(modalFreq[modeNo]) - np.sin(modalFreq[modeNo]))/(np.cosh(modalFreq[modeNo]) + np.cos(modalFreq[modeNo]))
-        val = np.cosh(modalFreq[modeNo]*x) - np.cos(modalFreq[modeNo]*x) - sigma*(np.sinh(modalFreq[modeNo]*x) - np.sin(modalFreq[modeNo]*x))
+        sigma = (np.sinh(modalEig[modeNo]) - np.sin(modalEig[modeNo]))/(np.cosh(modalEig[modeNo]) + np.cos(modalEig[modeNo]))
+        val = np.cosh(modalEig[modeNo]*x) - np.cos(modalEig[modeNo]*x) - sigma*(np.sinh(modalEig[modeNo]*x) - np.sin(modalEig[modeNo]*x))
         return val
            
     # \phi (x)
     def phi(x, modeNo):
-        sigma = (np.sinh(modalFreq[modeNo]) - np.sin(modalFreq[modeNo]))/(np.cosh(modalFreq[modeNo]) + np.cos(modalFreq[modeNo]))
-        val = np.cosh(modalFreq[modeNo]*x) - np.cos(modalFreq[modeNo]*x) - sigma*(np.sinh(modalFreq[modeNo]*x) - np.sin(modalFreq[modeNo]*x))
+        sigma = (np.sinh(modalEig[modeNo]) - np.sin(modalEig[modeNo]))/(np.cosh(modalEig[modeNo]) + np.cos(modalEig[modeNo]))
+        val = np.cosh(modalEig[modeNo]*x) - np.cos(modalEig[modeNo]*x) - sigma*(np.sinh(modalEig[modeNo]*x) - np.sin(modalEig[modeNo]*x))
         return val/normalizationFactor[modeNo]
     
     # \phi' (x)
     def dPhi(x, modeNo):
-        sigma = (np.sinh(modalFreq[modeNo]) - np.sin(modalFreq[modeNo]))/(np.cosh(modalFreq[modeNo]) + np.cos(modalFreq[modeNo]))
-        val = np.sinh(modalFreq[modeNo]*x) + np.sin(modalFreq[modeNo]*x) - sigma*(np.cosh(modalFreq[modeNo]*x) - np.cos(modalFreq[modeNo]*x))
-        return modalFreq[modeNo]*val/normalizationFactor[modeNo]
+        sigma = (np.sinh(modalEig[modeNo]) - np.sin(modalEig[modeNo]))/(np.cosh(modalEig[modeNo]) + np.cos(modalEig[modeNo]))
+        val = np.sinh(modalEig[modeNo]*x) + np.sin(modalEig[modeNo]*x) - sigma*(np.cosh(modalEig[modeNo]*x) - np.cos(modalEig[modeNo]*x))
+        return modalEig[modeNo]*val/normalizationFactor[modeNo]
     
     # \phi'' (x)
     def d2Phi(x, modeNo):
-        sigma = (np.sinh(modalFreq[modeNo]) - np.sin(modalFreq[modeNo]))/(np.cosh(modalFreq[modeNo]) + np.cos(modalFreq[modeNo]))
-        val = np.cosh(modalFreq[modeNo]*x) + np.cos(modalFreq[modeNo]*x) - sigma*(np.sinh(modalFreq[modeNo]*x) + np.sin(modalFreq[modeNo]*x))
-        return (modalFreq[modeNo]**2)*val/normalizationFactor[modeNo]
+        sigma = (np.sinh(modalEig[modeNo]) - np.sin(modalEig[modeNo]))/(np.cosh(modalEig[modeNo]) + np.cos(modalEig[modeNo]))
+        val = np.cosh(modalEig[modeNo]*x) + np.cos(modalEig[modeNo]*x) - sigma*(np.sinh(modalEig[modeNo]*x) + np.sin(modalEig[modeNo]*x))
+        return (modalEig[modeNo]**2)*val/normalizationFactor[modeNo]
    
     # \phi''' (x)
     def d3Phi(x, modeNo):
-        sigma = (np.sinh(modalFreq[modeNo]) - np.sin(modalFreq[modeNo]))/(np.cosh(modalFreq[modeNo]) + np.cos(modalFreq[modeNo]))
-        val = np.sinh(modalFreq[modeNo]*x) - np.sin(modalFreq[modeNo]*x) - sigma*(np.cosh(modalFreq[modeNo]*x) + np.cos(modalFreq[modeNo]*x))
-        return (modalFreq[modeNo]**3)*val/normalizationFactor[modeNo]
+        sigma = (np.sinh(modalEig[modeNo]) - np.sin(modalEig[modeNo]))/(np.cosh(modalEig[modeNo]) + np.cos(modalEig[modeNo]))
+        val = np.sinh(modalEig[modeNo]*x) - np.sin(modalEig[modeNo]*x) - sigma*(np.cosh(modalEig[modeNo]*x) + np.cos(modalEig[modeNo]*x))
+        return (modalEig[modeNo]**3)*val/normalizationFactor[modeNo]
     
     # \phi'''' (x)
     def d4Phi(x, modeNo):
-        sigma = (np.sinh(modalFreq[modeNo]) - np.sin(modalFreq[modeNo]))/(np.cosh(modalFreq[modeNo]) + np.cos(modalFreq[modeNo]))
-        val = np.cosh(modalFreq[modeNo]*x) - np.cos(modalFreq[modeNo]*x) - sigma*(np.sinh(modalFreq[modeNo]*x) - np.sin(modalFreq[modeNo]*x))
-        return (modalFreq[modeNo]**4)*val/normalizationFactor[modeNo]
+        sigma = (np.sinh(modalEig[modeNo]) - np.sin(modalEig[modeNo]))/(np.cosh(modalEig[modeNo]) + np.cos(modalEig[modeNo]))
+        val = np.cosh(modalEig[modeNo]*x) - np.cos(modalEig[modeNo]*x) - sigma*(np.sinh(modalEig[modeNo]*x) - np.sin(modalEig[modeNo]*x))
+        return (modalEig[modeNo]**4)*val/normalizationFactor[modeNo]
 
     # identity: returns the input
     def identity(x, modeNo):
@@ -309,14 +309,14 @@ class ModeShape:
   Function for NORMALIZATION of the MODAL SHAPES for the cantilever beam
   
 '''
-# Non-dimensional modal frequencies for a cantilever beam: \lambda 
+# Non-dimensional modal eigenvalues for a cantilever beam: \lambda 
 #     from Meirovitch's Fundamentals of vibrations (page no: 420)
-modalFreq = np.zeros(16)
-modalFreq[1] = 1.8751; modalFreq[2] = 4.69409; modalFreq[3] = 7.85476; modalFreq[4] = 10.9955; modalFreq[5] = 14.1372;
-modalFreq[6] = 17.2788; modalFreq[7] = 20.4204; modalFreq[8] = 23.5619; modalFreq[9] = 26.7035; modalFreq[10] = 29.8451;
-modalFreq[11] = 32.9867; modalFreq[12] = 36.1283; modalFreq[13] = 39.2699; modalFreq[14] = 42.4115; modalFreq[15] = 45.5531;
+modalEig = np.zeros(16)
+modalEig[1] = 1.8751; modalEig[2] = 4.69409; modalEig[3] = 7.85476; modalEig[4] = 10.9955; modalEig[5] = 14.1372;
+modalEig[6] = 17.2788; modalEig[7] = 20.4204; modalEig[8] = 23.5619; modalEig[9] = 26.7035; modalEig[10] = 29.8451;
+modalEig[11] = 32.9867; modalEig[12] = 36.1283; modalEig[13] = 39.2699; modalEig[14] = 42.4115; modalEig[15] = 45.5531;
 
-normalizationFactor = np.zeros(modalFreq.size)
+normalizationFactor = np.zeros(modalEig.size)
 normalizationFactor = np.array([0., 0.99999892, 0.99999988, 1.00000016, 0.99999815, 1.00000112, 1.00000117, 1.00000117, 
                                 0.99999906, 0.99999903, 1.00000049, 1.00016218, 1.00232238, 0.9922316,  0.96260839, 0.91879675])
 
@@ -324,7 +324,7 @@ normalizationFactor = np.array([0., 0.99999892, 0.99999988, 1.00000016, 0.999998
 def normalizeModeShapes():
     global normalizationFactor
     
-    for i in range(1,modalFreq.size):
+    for i in range(1,modalEig.size):
         val = Integrator.integrateTwoFunc(ModeShape.normalizePhi, ModeShape.normalizePhi, i, i)
         normalizationFactor[i] = np.sqrt(val)
     return None
@@ -351,7 +351,7 @@ class Response:
         return res
     
     # Plot response
-    def plotResponse(t, displacement_ic, velocity_ic, fps=10):  # fps = frames per second
+    def plotResponse(t, displacement_ic, velocity_ic, fps=10, velocity_hammer_input = 'No', velocity_hammer_magnitude = 0.1, record_video = 'No'):  # fps = frames per second
         
         global N  # No of modes used for approximation
         global xi  # Domain description
@@ -366,11 +366,129 @@ class Response:
 
         # Projecting displacement
         for n in range(N):
-        	x0[n] = Integrator.numericalIntegration(displacement_ic*ModeShape.phi(xi, n+1), xi, scheme = 'simps')
+            if (velocity_hammer_input == 'Yes'):
+                x0[n] = 0 
+            else:
+                x0[n] = Integrator.numericalIntegration(displacement_ic*ModeShape.phi(xi, n+1), xi, scheme = 'simps')
 
         # Projecting velocity
         for n in range(N):
-        	x0[n + N] = Integrator.numericalIntegration(velocity_ic*ModeShape.phi(xi, n+1), xi, scheme = 'simps') #0.2*ModeShape.phi(1.0, n+1)
+            if (velocity_hammer_input == 'Yes'):
+                x0[n + N] = velocity_hammer_magnitude*ModeShape.phi(1.0, n+1)
+            else:
+                x0[n + N] = Integrator.numericalIntegration(velocity_ic*ModeShape.phi(xi, n+1), xi, scheme = 'simps')
+
+        ### Setting up damping matrix (C)  and stiffness matrix (K) 
+        # Equation: [I] \ddot{\vb{q}} + [C] \dot{\vb{q}} + [K] \vb{q} = \vb{0}
+        C = np.zeros((N,N))
+        K = np.zeros((N,N))
+
+        for i in range(N):
+            for j in range(N):
+                K[i,j] = Coefficients.K(i+1,j+1)
+                C[i,j] = Coefficients.C(i+1,j+1)
+            
+        ### State space model
+        # \ddot{\vb{x}} = [A] \vb{x}  where A = [zeros(N,N), identity(N,N); -K, -C]
+        # \vb{x} = {\vb{q} \\ \vb{z}},   \vb{z} = \dot{\vb{q}}
+    
+        A = np.zeros((2*N, 2*N)) # State or system matrix
+        A[0:N, N:2*N] = np.eye(N)
+        A[N:2*N, 0:N]  = -K
+        A[N:2*N, N:2*N] = -C
+        
+        B = np.zeros((2*N, 1))   # Control or input matrix
+        
+        C_ = np.eye(2*N)         # Output matrix
+
+        D = np.zeros((2*N,1))    # Direct transmission or feed through matrix
+        
+        # State space model
+        sys = control.matlab.ss(A, B, C_, D)
+        #print(sys)
+        
+        ### Response to initial conditions: 
+        q, t = control.matlab.initial(sys, t, x0)
+        
+        ### Solution reconstruction and plotting
+        plt.ion()
+        fig, ax = plt.subplots(2, 1, figsize=(10,15))
+
+        if (record_video == 'Yes'):
+            camera = Camera(fig) # initializing the camera
+
+        for k in range(len(t)): 
+                       
+            ### Superposition of modes for displacement and velocity
+            # Displacement
+            ax[0].plot(xi, Response.superpose(q[k, 0:N]), color=colour[0], label='Displacement')
+            ax[0].set_xlim((0,1)); ax[0].set_ylim((-0.2,0.2))
+            ax[0].set_ylabel(r'Displacement, $\eta $')
+            ax[0].text(0.15, 1.25, r'Dynamics of cantilevered pipe conveying fluid', transform=ax[0].transAxes, fontsize=MEDIUM_SIZE-3)
+            ax[0].text(0.0, 1.15, r'Parameters: $\beta$ = %.3f, $U$ = %.3f, $\alpha$ = %.3f, $\gamma$ = %.3f, $\sigma$ = %.3f'% (beta_, U, alpha_, gamma_, sigma_), \
+                       transform=ax[0].transAxes, fontsize=MEDIUM_SIZE-3)
+            ax[0].text(0.4, 1.05, 'Time: %.5f'% t[k], transform=ax[0].transAxes, fontsize=MEDIUM_SIZE)
+            ax[0].grid('on')
+
+            # Velocity
+            ax[1].plot(xi, Response.superpose(q[k, N:2*N]), color=colour[1], label='Velocity')
+            ax[1].set_xlim((0,1)); ax[1].set_ylim((-1.0,1.0))
+            ax[1].set_xlabel(r'$\xi$')
+            ax[1].set_ylabel(r'Velocity, $\dot{\eta} $')
+            ax[1].grid('on')
+
+            # plt.legend(loc='best')
+            # plt.cla()
+            
+            # Capture the snapshot of the figure
+            if (record_video == 'Yes'):
+                camera.snap()
+
+            # Pause for the prescribed fps\
+            plt.pause(1.0/fps)
+
+            # Clear axes (comment it if camera is being used)
+            if (record_video != 'Yes'):
+                ax[0].clear(); ax[1].clear()
+        
+        # Create and save the animation to a file
+        if (record_video == 'Yes'):
+            animation = camera.animate()
+            animation.save('test.mp4')
+         
+        #plt.show()
+        plt.close()
+
+        return None
+
+    ### Record and plot displacement time history at a point
+
+    def pointHistoryAndEnergy(t, displacement_ic, velocity_ic, point = -1, save_plot = 'No', velocity_hammer_input = 'No', velocity_hammer_magnitude = 0.1): 
+        
+        global N  # No of modes used for approximation
+        global xi  # Domain description
+        global beta_     # Mass ratio = (fluid)/(fluid + solid)
+        global gamma_    # Non-dimensionalized acceleration due to gravity
+        global alpha_    # Kelvin-Voigt viscoelasticity factor
+        global sigma_    # Non-dimensionalized external dissipation constant
+        global U 
+
+        ### Projecting initial conditions on the Galerkin modes
+        x0 = np.zeros((2*N, 1)) 
+
+        # Projecting displacement
+        for n in range(N):
+            if (velocity_hammer_input == 'Yes'):
+                x0[n] = 0 
+            else:
+                x0[n] = Integrator.numericalIntegration(displacement_ic*ModeShape.phi(xi, n+1), xi, scheme = 'simps')
+
+        # Projecting velocity
+        for n in range(N):
+            if (velocity_hammer_input == 'Yes'):
+                x0[n + N] = velocity_hammer_magnitude*ModeShape.phi(1.0, n+1)
+            else:
+                x0[n + N] = Integrator.numericalIntegration(velocity_ic*ModeShape.phi(xi, n+1), xi, scheme = 'simps')
 
         ### Setting up damping matrix (C)  and stiffness matrix (K) 
         # Equation: [I] \ddot{\vb{q}} + [C] \dot{\vb{q}} + [K] \vb{q} = \vb{0}
@@ -392,66 +510,75 @@ class Response:
         A[N:2*N, N:2*N] = -C
         
         B = np.zeros((2*N, 1))
-        
-        C = np.eye(2*N)
-
+        C_ = np.eye(2*N)
         D = np.zeros((2*N,1))
         
         # State space model
-        sys = control.matlab.ss(A, B, C, D)
+        sys = control.matlab.ss(A, B, C_, D)
         #print(sys)
         
         ### Response to initial conditions: 
         q, t = control.matlab.initial(sys, t, x0)
-        
-        ### Solution reconstruction and plotting
+
+        ### Initialize variables
+        pointDisplacement = np.zeros(t.size)
+        kineticEnergy = np.zeros(t.size)
+
+        ### Record
+        for k in range(len(t)):
+
+            kineticEnergy[k] = 0.5*float(q[k, N:2*N].T @ (np.eye(N) @ q[k, N:2*N]))
+
+            # Superpose
+            for l in range(N):
+                pointDisplacement[k] += q[k, l]*ModeShape.phi(xi[point], l+1)
+
+        ### Plot point history 
         plt.ion()
-        fig, ax = plt.subplots(2, 1, figsize=(10,15))
-        #camera = Camera(fig) # initializing the camera
+        fig, ax = plt.subplots(figsize=(15, 8))
+        ax.plot(t, pointDisplacement, color=colour[0], label='Displacement')
+        ax.set_xlim((t[0],t[-1])); ax.set_ylim((-0.2,0.2))
+        ax.set_ylabel(r'Point displacement, $\eta $')
+        ax.set_xlabel(r'Time, $\tau$')
+        #ax.text(0.25, 1.1, r'Dynamics of cantilevered pipe conveying fluid', transform=ax.transAxes, fontsize=MEDIUM_SIZE-3)
+        ax.text(0.15, 1.05, r'Parameters: $\beta$ = %.3f, $U$ = %.3f, $\alpha$ = %.3f, $\gamma$ = %.3f, $\sigma$ = %.3f'% (beta_, U, alpha_, gamma_, sigma_), \
+                       transform=ax.transAxes, fontsize=MEDIUM_SIZE-2)
+        ax.text(0.4, 1.01, r'Probe location: $\xi$ = %.2f'% xi[point], transform=ax.transAxes, fontsize=MEDIUM_SIZE - 2)
+        ax.grid('on')
 
-        for k in range(len(t)): 
-                       
-            # ### Superposition of modes for displacement and velocity
-            
-            # Displacement
-            ax[0].plot(xi, Response.superpose(q[k, 0:N]), color=colour[0], label='Displacement')
-            ax[0].set_xlim((0,1)); ax[0].set_ylim((-0.4,0.4))
-            ax[0].set_ylabel(r'Displacement, $\eta $')
-            ax[0].text(0.15, 1.25, r'Dynamics of cantilevered pipe conveying fluid', transform=ax[0].transAxes, fontsize=MEDIUM_SIZE-3)
-            ax[0].text(0.0, 1.15, r'Parameters: $\beta$ = %.3f, $U$ = %.3f, $\alpha$ = %.3f, $\gamma$ = %.3f, $\sigma$ = %.3f'% (beta_, U, alpha_, gamma_, sigma_), \
-                       transform=ax[0].transAxes, fontsize=MEDIUM_SIZE-3)
-            ax[0].text(0.4, 1.05, 'Time: %.5f'% t[k], transform=ax[0].transAxes, fontsize=MEDIUM_SIZE)
-            ax[0].grid('on')
+        figName = "pointDisplacement_U_" + str(U) + "_beta_" + str(beta_) + "_alpha_" + str(alpha_) + "_gamma_" + str(gamma_) + "_sigma_" + str(sigma_) + ".png"    
+        if (save_plot == 'Yes'):
+            plt.savefig(figName, transparent = False, bbox_inches = 'tight', pad_inches = 0)
+            os.system('shotwell ' + figName + ' &')
+        else:
+            plt.pause(10)
 
-            # Velocity
-            ax[1].plot(xi, Response.superpose(q[k, N:2*N]), color=colour[1], label='Velocity')
-            ax[1].set_xlim((0,1)); ax[1].set_ylim((-1.0,1.0))
-            ax[1].set_xlabel(r'$\xi$')
-            ax[1].set_ylabel(r'Velocity, $\dot{\eta} $')
-            ax[1].grid('on')
-
-            # plt.legend(loc='best')
-            # plt.cla()
-            
-            # Capture the snapshot of the figure
-            #camera.snap()
-
-            # Pause for the prescribed fps\
-            plt.pause(1.0/fps)
-
-            # Clear axes (comment it if camera is being used)
-            ax[0].clear(); ax[1].clear()
-        
-        # Create and save the animation to a file
-        #animation = camera.animate()
-        #animation.save('test.mp4')
-         
-        #plt.show()
         plt.close()
 
+        ### Plot rate of change of Total Energy
+        plt.ion()
+        fig, ax = plt.subplots(figsize=(15, 8))
+        ax.plot(t, kineticEnergy, color=colour[0], label='kineticEnergy')
+        ax.set_xlim((t[0], t[-1])); ax.set_ylim((0, 0.6))
+        ax.set_ylabel(r'Kinetic energy, $T$')
+        ax.set_xlabel(r'Time, $\tau$')
+        #ax.text(0.25, 1.1, r'Dynamics of cantilevered pipe conveying fluid', transform=ax.transAxes, fontsize=MEDIUM_SIZE-3)
+        ax.text(0.11, 1.1, r'Parameters: $\beta$ = %.3f, $U$ = %.3f, $\alpha$ = %.3f, $\gamma$ = %.3f, $\sigma$ = %.3f'% (beta_, U, alpha_, gamma_, sigma_), \
+                       transform=ax.transAxes, fontsize=MEDIUM_SIZE-2)
+        ax.text(0.3, 1.03, r'Kinetic energy, $T = \frac{1}{2} \vec{\dot{q}}^T~M~\vec{\dot{q}}$', transform=ax.transAxes, fontsize=MEDIUM_SIZE - 2)
+        ax.grid('on')
+
+        figName = "kineticEnergy_U_" + str(U) + "_beta_" + str(beta_) + "_alpha_" + str(alpha_) + "_gamma_" + str(gamma_) + "_sigma_" + str(sigma_) + ".png"    
+        if (save_plot == 'Yes'):
+            plt.savefig(figName, transparent = False, bbox_inches = 'tight', pad_inches = 0)
+            os.system('shotwell ' + figName + ' &')
+        else:
+            plt.pause(10)
+
+        plt.close()
+
+
         return None
-
-
 
 '''
   
@@ -465,7 +592,121 @@ class RootLocus:
        Root locus function
     '''
     
-    def rootLocus(U_array, modes_to_plot = 4, show_plot = 'No', returnEigenvalues = 'No'):  # modes_to_plot: Number of modes to plot
+    def rootLocus(U_array, modes_to_plot = 4, save_plot = 'No', returnEigenvalues = 'No'):  # modes_to_plot: Number of modes to plot
+        
+        global N         # No of modes used for approximation
+        global xi        # Domain description
+        global beta_     # Mass ratio = (fluid)/(fluid + solid)
+        global gamma_    # Non-dimensionalized acceleration due to gravity
+        global alpha_    # Kelvin-Voigt viscoelasticity factor
+        global sigma_    # Non-dimensionalized external dissipation constant
+        global U         # Non-dimensional flow velocity
+        
+
+        ### Print what is being done
+        print("*** Determining  variation of complex frequency with flow velocity ***")    
+        print('Parameters: beta = %.5f, gamma = %.5f, alpha = %.5f, sigma = %.5f'% (beta_, gamma_, alpha_, sigma_)) 
+        print("   ")
+        
+        ### Setting up damping matrix (C)  and stiffness matrix (K) 
+        # Equation: [I] \ddot{\vb{q}} + [C] \dot{\vb{q}} + [K] \vb{q} = \vb{0}
+        
+        C = np.zeros((N,N))
+        K = np.zeros((N,N))
+        
+        ### Real and imaginary parts of the eigenvalues
+        frequencyArray = np.zeros((N,U_array.size), dtype=np.complex64)
+        
+        ### State space form
+        # \ddot{\vb{x}} = [A] \vb{x}  where A = [zeros(N,N), identity(N,N); -K, -C]
+        # \vb{x} = {\vb{q} \\ \vb{z}},   \vb{z} = \dot{\vb{q}}
+        
+        A = np.zeros((2*N, 2*N))
+        A[0:N, N:2*N] = np.eye(N)
+        
+        for n in range(U_array.size):
+            
+            U = U_array[n]     # Non-dimensionalized flow velocity
+            
+            print("Processing U = %f" % U)
+            for i in range(N):
+                for j in range(N):
+                    K[i,j] = Coefficients.K(i+1,j+1)
+                    C[i,j] = Coefficients.C(i+1,j+1)
+            
+            # Populate K and C matrices into matrix A        
+            A[N:2*N, 0:N]  = -K
+            A[N:2*N, N:2*N] = -C
+            
+            ### Finding eigenvalues
+            eigvals, eigvecs = la.eig(A)
+            eigvals = -1.0j*eigvals
+            #print(eigvals)
+            
+            ### Record eigenvalues
+            if(n==0):
+                if(alpha_ == 0.0):
+                    frequencyArray[:, n] = np.sort(eigvals[::2]) #np.reshape(eigvals[::2], (N,1))
+                else:
+                    frequencyArray[:, n] = np.sort(eigvals[::2]) #np.reshape(eigvals[::2], (N,1))
+                
+            else:
+                # Order the eigenvalues according to nearest neighbours 
+                frequencyArray[:, n] = closestNeighbourMapping(frequencyArray[:, n-1], np.sort(eigvals[::2]))
+                
+        ### Plotting variation of complex frequency of lower modes for a particular value of beta_        
+        legend = []          # Dynamically create legend
+        
+        plt.ion() # interactive mode on
+        fig, ax = plt.subplots(figsize=(15,10))
+        
+        for row in range(modes_to_plot):
+            plt.plot(np.real(frequencyArray[row, :]), np.imag(frequencyArray[row, :]), color=colour[row], lw=line_width, \
+                     label="Coupled mode "+ str(row + 1)) # marker=marker[row], 
+            legend += ["Coupled mode "+ str(row + 1)]
+                
+        ax.set_xlim((0,130)); ax.set_ylim((-20,30))
+        ax.set_xlabel(r'Real $(\omega)$')
+        ax.set_ylabel(r'Imag $(\omega)$')
+        ax.set_title(r'Parameters: $\beta$ = %.5f, $\gamma$ = %.5f, $\alpha$ = %.5f, $\sigma$ = %.5f'% (beta_, gamma_, alpha_, sigma_))
+        ax.grid()
+        
+        # Adding flutter U to the plot
+        (flutterMode, flutterIndices, flutterVelocity) = RootLocus.determineFlutterSpeed(frequencyArray, U_array)
+        markers = ['*', 'd', '+', 'x']
+    
+        if (len(flutterMode) != 0):
+            for k in range(len(flutterMode)):
+                legend += ["$U_{f," + str(flutterMode[k]) +"}$ = " + str("%.4f"%flutterVelocity[k])]
+                ax.scatter([frequencyArray[flutterMode[k] - 1, flutterIndices[k]].real], [0], s=150, marker=markers[k], color = 'red')
+    
+        # Adding U limits to the plot
+        for row in range(modes_to_plot):
+            ax.scatter(np.real(frequencyArray[row,0]), np.imag(frequencyArray[row,0]), s=150, \
+                   marker='o', color='black')
+            ax.scatter(np.real(frequencyArray[row,-1]), np.imag(frequencyArray[row,-1]), s=150, \
+                   marker='x', color='black')         
+        legend += ["$U$ = " + str(U_array[0]), "$U$ = " + str(U_array[-1])]
+        
+        #plt.legend(legend, bbox_to_anchor=(1,0), loc="lower left") #place legend in top right corner
+        #plt.legend(legend, bbox_to_anchor=(0, 1, 1, 0), loc="lower left", mode="expand", ncol=N) #place legend above plot
+        plt.legend(legend,loc="best") #place legend below plot
+        figName = "rootLocus_beta_" + str(beta_) + "_alpha_" + str(alpha_) + "_gamma_" + str(gamma_) + "_sigma_" + str(sigma_) + ".png"
+    
+        if (save_plot == 'Yes'):
+            plt.savefig(figName, transparent = False, bbox_inches = 'tight', pad_inches = 0)
+            os.system('shotwell ' + figName + ' &')
+        else:
+            plt.pause(10)
+
+        plt.close()
+
+        if (returnEigenvalues == 'Yes'):
+            return frequencyArray
+        else:  
+            return None
+
+    def rootLocusScatter(U_array, modes_to_plot = 4, save_plot = 'No', returnEigenvalues = 'No'):  # modes_to_plot: Number of modes to plot
         
         global N         # No of modes used for approximation
         global xi        # Domain description
@@ -521,8 +762,7 @@ class RootLocus:
                 if(alpha_ == 0.0):
                     frequencyArray[:, n] = np.sort(eigvals[::2]) #np.reshape(eigvals[::2], (N,1))
                 else:
-                    frequencyArray[:, n] = np.sort(np.abs(eigvals[::2])) #np.reshape(eigvals[::2], (N,1))
-
+                    frequencyArray[:, n] = np.sort(eigvals[::2]) #np.reshape(eigvals[::2], (N,1))
                 
             else:
                 # Order the eigenvalues according to nearest neighbours 
@@ -533,49 +773,33 @@ class RootLocus:
         
         plt.ion() # interactive mode on
         fig, ax = plt.subplots(figsize=(15,10))
-        
+
+        markers = ['*', 'd', '+']
         for row in range(modes_to_plot):
-            plt.plot(np.real(frequencyArray[row, :]), np.imag(frequencyArray[row, :]), color=colour[row], lw=line_width, \
-                     label="Coupled mode "+ str(row + 1)) # marker=marker[row], 
+            ax.scatter(np.real(frequencyArray[row, :]), np.imag(frequencyArray[row, :]),  s=30, marker=markers[row], color = 'red')
             legend += ["Coupled mode "+ str(row + 1)]
                 
-        ax.set_xlim((0,130)); ax.set_ylim((-20,30))
+        ax.set_xlim((0,130)); ax.set_ylim((-20,40))
         ax.set_xlabel(r'Real $(\omega)$')
         ax.set_ylabel(r'Imag $(\omega)$')
         ax.set_title(r'Parameters: $\beta$ = %.3f, $\gamma$ = %.3f, $\alpha$ = %.3f, $\sigma$ = %.3f'% (beta_, gamma_, alpha_, sigma_))
         ax.grid()
-        
-        # Adding flutter U to the plot
-        (flutterMode, flutterIndices, flutterVelocity) = RootLocus.determineFlutterSpeed(frequencyArray, U_array)
-        markers = ['*', 'd', '+']
     
-        if (len(flutterMode) != 0):
-            for k in range(len(flutterMode)):
-                legend += ["$U_{f," + str(flutterMode[k]) +"}$ = " + str("%.4f"%flutterVelocity[k])]
-                ax.scatter([frequencyArray[flutterMode[k] - 1, flutterIndices[k]].real], [0], s=150, marker=markers[k], color = 'red')
-    
-        # Adding U limits to the plot
-        for row in range(modes_to_plot):
-            ax.scatter(np.real(frequencyArray[row,0]), np.imag(frequencyArray[row,0]), s=150, \
-                   marker='o', color='black')
-            ax.scatter(np.real(frequencyArray[row,-1]), np.imag(frequencyArray[row,-1]), s=150, \
-                   marker='x', color='black')         
-        legend += ["$U$ = " + str(U_array[0]), "$U$ = " + str(U_array[-1])]
-        
-        #plt.legend(legend, bbox_to_anchor=(1,0), loc="lower left") #place legend in top right corner
-        #plt.legend(legend, bbox_to_anchor=(0, 1, 1, 0), loc="lower left", mode="expand", ncol=N) #place legend above plot
         plt.legend(legend,loc="best") #place legend below plot
         #plt.show()
         figName = "rootLocus_beta_" + str(beta_) + "_alpha_" + str(alpha_) + "_gamma_" + str(gamma_) + "_sigma_" + str(sigma_) + ".png"
-        plt.savefig(figName, transparent = False, bbox_inches = 'tight', pad_inches = 0)
-        plt.close()
     
-        if (show_plot == 'Yes'):
-           os.system('shotwell ' + figName + ' &')
+        if (save_plot == 'Yes'):
+            plt.savefig(figName, transparent = False, bbox_inches = 'tight', pad_inches = 0)
+            os.system('shotwell ' + figName + ' &')
 
+        else:
+            plt.pause(30)
+
+        plt.close()
 
         if (returnEigenvalues == 'Yes'):
-            return frequencyArray
+            return print(frequencyArray)
 
         else:  
             return None
@@ -625,7 +849,7 @@ class RootLocus:
 
 class FlutterVelocityVsBeta:
 
-    def flutterVelocityVsBeta(U_array, show_plot = 'No', show_omega = 'No'):
+    def flutterVelocityVsBeta(U_array, save_plot = 'No', show_omega = 'No'):
         
         global N         # No of modes used for approximation
         global xi        # Domain description
@@ -744,13 +968,14 @@ class FlutterVelocityVsBeta:
             f1.write('# U_f flutter_beta   flutter_omega\n' )
             for k in range(len(U_array)):
                 f1.write(str(U_array[k]) + "    " + str(flutterBeta_array[k]) + "    " + str(flutterOmega_array[k]) + "\n")
-
-
-        plt.savefig(fileName  + ".png", transparent = False, bbox_inches = 'tight', pad_inches = 0)
-        plt.close()
     
-        if (show_plot == 'Yes'):
-           os.system('shotwell ' + fileName + '.png' + ' &')
+        if (save_plot == 'Yes'):
+            plt.savefig(fileName  + ".png", transparent = False, bbox_inches = 'tight', pad_inches = 0)
+            os.system('shotwell ' + fileName + '.png' + ' &')
+        else:
+            plt.pause(10)
+
+        plt.close()
 
         # # Flutter Omega
         # plt.ion() # interactive mode on
@@ -778,7 +1003,6 @@ class FlutterVelocityVsBeta:
         #    os.system('shotwell ' + fileName + '.png' + ' &')
        
         return None
-
 
     '''
       Determine flutter flow velocity : check when the imaginary part becomes negative and return the corresponding U
@@ -812,8 +1036,6 @@ class FlutterVelocityVsBeta:
             #print("*****************************************************")
     
         return (flutterBeta, flutterOmega)
-
-
 
 '''
 
@@ -859,21 +1081,24 @@ def closestNeighbourMapping(previous, current):
 def plotBetaVsVelocity():
 
     global sigma_
-    global alpha_
+    #global alpha_
+    global gamma_
 
     plt.ion() # interactive mode on
     fig, ax = plt.subplots(figsize=(9,18))
 
-    gamma_ = [0.0, 10.0, 100.0]
+    #gamma_ = [0.0, 10.0, 100.0]
+    alpha_ = [0.0, 0.001, 0.002, 0.003]
 
-    for i in range(len(gamma_)):
-        fileName = "flutterVelocityVsBeta_alpha_" + str(alpha_) + "_gamma_" + str(gamma_[i]) + "_sigma_" + str(sigma_)
+    for i in range(len(alpha_)):
+        fileName = "flutterVelocityVsBeta_alpha_" + str(alpha_[i]) + "_gamma_" + str(gamma_) + "_sigma_" + str(sigma_)
         data = np.loadtxt(fileName + '.dat', skiprows=1, delimiter='    ')
         #data = np.loadtxt(fileName, skiprows=1, delimiter=',')
-        ax.plot(data[:,1], data[:,0], color=colour[i], lw=line_width, label=r"$\gamma = %.1f$"%gamma_[i])
+        ax.plot(data[:,1], data[:,0], color=colour[i], lw=line_width, label=r"$\alpha = %.3f$"%alpha_[i])
     
-    plt.title(r'$\alpha$ = %.3f, $\sigma$ = %.3f'% (alpha_, sigma_))       
-    ax.set_xlim((0,1)); ax.set_ylim((0,24))
+    #plt.title(r'$\alpha$ = %.3f, $\sigma$ = %.3f'% (alpha_, sigma_))    
+    plt.title(r'$\gamma$ = %.3f, $\sigma$ = %.3f'% (gamma_, sigma_))     
+    ax.set_xlim((0,1)); ax.set_ylim((0,14))
     ax.set_xlabel(r'Mass ratio, $\beta$')
     ax.set_ylabel(r'Flutter flow velocity, $U_{f}$')
     plt.legend(loc='best')
@@ -881,20 +1106,18 @@ def plotBetaVsVelocity():
     ax.set_xticks(0.1*np.arange(11))
     plt.pause(2)
 
-    plt.savefig("flutterVelocityVsBeta_various_gamma.png", transparent = False, bbox_inches = 'tight', pad_inches = 0)
+    #plt.savefig("flutterVelocityVsBeta_various_gamma.png", transparent = False, bbox_inches = 'tight', pad_inches = 0)
+    plt.savefig("flutterVelocityVsBeta_various_alpha.png", transparent = False, bbox_inches = 'tight', pad_inches = 0)
 
     plt.close()
 
     return None
-
 
 ''' 
     *******************************************************************************************************
                                                   MAIN PROGRAM 
     *******************************************************************************************************          
 ''' 
-
-
 '''
     
      LINEAR ANALYSIS OF A CANTILEVERED PIPE CONVEYING FLUID
@@ -902,10 +1125,10 @@ def plotBetaVsVelocity():
 '''
 
 ### Parameters
-beta_   = 0.1     # Mass ratio = (fluid)/(fluid + solid)
-gamma_  = 10.0     # Non-dimensionalized acceleration due to gravity
-alpha_  = 0.0     # Kelvin-Voigt viscoelasticity factor
-sigma_  = 10.0       # Non-dimensionalized external dissipation constant
+beta_   = 0.2     # Mass ratio = (fluid)/(fluid + solid)
+gamma_  = 0.0     # Non-dimensionalized acceleration due to gravity
+alpha_  = 0.0   # Kelvin-Voigt viscoelasticity factor
+sigma_  = 0.0       # Non-dimensionalized external dissipation constant
 U       = 0.      # Non-dimensional flow velocity
 
 ### Domain discretization
@@ -915,15 +1138,17 @@ xi = np.linspace(0, 1, 501)
 N = 10
 
 ### Non-dimensionalized flow velocity array
-U_array = np.linspace(0,15,300)
+U_array = np.linspace(0,20,301)
 #U_array = np.zeros((1,))
 
 ### Variation of complex frequencies with flow velocity U
-RootLocus.rootLocus(U_array, modes_to_plot = 4, show_plot ='Yes')
+#locus = RootLocus.rootLocus(U_array, modes_to_plot = 4, save_plot ='No', returnEigenvalues='Yes')
+#print(locus[:,0])
+#RootLocus.rootLocusScatter(U_array, modes_to_plot = 3, save_plot ='No')
 
 ### Variation of flutter flow velocity with mass ratio for a given set of parameters
-U_array = np.linspace(4.0,17,200)
-#FlutterVelocityVsBeta.flutterVelocityVsBeta(U_array[:], show_plot='Yes', show_omega = 'No')
+U_array = np.linspace(4.2,13.,21)
+#FlutterVelocityVsBeta.flutterVelocityVsBeta(U_array[:], save_plot='No', show_omega = 'No')
 
 
 ### Variation of flutter flow velocity with mass ratio for different gamma_
@@ -936,23 +1161,20 @@ U_array = np.linspace(4.0,17,200)
 '''
 
 # Non-dimensional flow velocity
-U = 0.5
+U = 5.6
 
 # Time array
-t = np.linspace(0, 10, 200)
+t = np.linspace(0, 10, 501)
 
 # Defining initial conditions
-displacement_ic = np.zeros(xi.shape) # 0.1*ModeShape.phi(xi, 1) 
+displacement_ic = 0.1*ModeShape.phi(xi, 1) 
 velocity_ic = np.zeros(xi.shape)
-velocity_ic[-1] = 0.2
 
 # Plot dynamic response
-#Response.plotResponse(t, displacement_ic, velocity_ic, fps=5)
+#Response.plotResponse(t, displacement_ic, velocity_ic, fps=5, velocity_hammer_input = 'No', velocity_hammer_magnitude = 0.2, record_video = 'Yes')
 
-
-
-
-
+# Plot point displacement history
+Response.pointHistoryAndEnergy(t, displacement_ic, velocity_ic, point = -1, save_plot = 'Yes',  velocity_hammer_input = 'Yes', velocity_hammer_magnitude = 0.2)
 
 ########### Test integrate
 
@@ -982,7 +1204,7 @@ velocity_ic[-1] = 0.2
 # fig, ax = plt.subplots(figsize=(15,10))
 
 # for t in T:
-#     plt.plot(x, 0.01*np.cos(np.sqrt(modalFreq[1])*t)*ModeShape.phi(x, 1))
+#     plt.plot(x, 0.01*np.cos(np.sqrt(modalEig[1])*t)*ModeShape.phi(x, 1))
 #     ax.set_xlim((0,1)); ax.set_ylim((-2,2))
 #     ax.set_xlabel(r'$\xi$')
 #     ax.set_ylabel(r'$\eta $')
