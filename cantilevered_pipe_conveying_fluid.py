@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 """
 
-Nonlinear dynamics of cantilevered pipe conveying fluid
+    Dynamics of cantilevered pipe conveying fluid
 
 AE255 Aeroelasticity term paper 
 
-@author: G R Krishna Chand Avatar
+@author: G R Krishna Chand Avatar, MTech (Aero) 3rd sem
 
 """
 ###################################### LOADING PACKAGES  ###########################################
@@ -45,7 +45,7 @@ line_width = 2
 line_style = ['--', '-.', '-']
 marker = ['*', 'd', 'o', '+']
 legend = ["Coarse", "Medium", "Fine"] 
-colour = ["red", "blue", "green", "magenta", "pink"]
+colour = ["red", "blue", "green", "magenta", "brown"]
 
 '''
 Class to perform integration for various coefficients 
@@ -1080,25 +1080,27 @@ def closestNeighbourMapping(previous, current):
 
 def plotBetaVsVelocity():
 
-    global sigma_
-    #global alpha_
+    #global sigma_
+    global alpha_
     global gamma_
 
     plt.ion() # interactive mode on
     fig, ax = plt.subplots(figsize=(9,18))
 
     #gamma_ = [0.0, 10.0, 100.0]
-    alpha_ = [0.0, 0.001, 0.002, 0.003]
+    #alpha_ = [0.0, 0.001, 0.002, 0.003]
+    sigma_ = [0.0, 1.0, 2.0, 5.0, 8.0]
 
-    for i in range(len(alpha_)):
-        fileName = "flutterVelocityVsBeta_alpha_" + str(alpha_[i]) + "_gamma_" + str(gamma_) + "_sigma_" + str(sigma_)
+    for i in range(len(sigma_)):
+        fileName = "flutterVelocityVsBeta_alpha_" + str(alpha_) + "_gamma_" + str(gamma_) + "_sigma_" + str(sigma_[i])
         data = np.loadtxt(fileName + '.dat', skiprows=1, delimiter='    ')
         #data = np.loadtxt(fileName, skiprows=1, delimiter=',')
-        ax.plot(data[:,1], data[:,0], color=colour[i], lw=line_width, label=r"$\alpha = %.3f$"%alpha_[i])
+        ax.plot(data[:,1], data[:,0], color=colour[i], lw=line_width, label=r"$\sigma = %.3f$"%sigma_[i])
     
     #plt.title(r'$\alpha$ = %.3f, $\sigma$ = %.3f'% (alpha_, sigma_))    
-    plt.title(r'$\gamma$ = %.3f, $\sigma$ = %.3f'% (gamma_, sigma_))     
-    ax.set_xlim((0,1)); ax.set_ylim((0,14))
+    #plt.title(r'$\gamma$ = %.3f, $\sigma$ = %.3f'% (gamma_, sigma_))  
+    plt.title(r'$\alpha$ = %.3f, $\gamma$ = %.3f'% (alpha_, gamma_))   
+    ax.set_xlim((0,1)); ax.set_ylim((0,18))
     ax.set_xlabel(r'Mass ratio, $\beta$')
     ax.set_ylabel(r'Flutter flow velocity, $U_{f}$')
     plt.legend(loc='best')
@@ -1107,21 +1109,20 @@ def plotBetaVsVelocity():
     plt.pause(2)
 
     #plt.savefig("flutterVelocityVsBeta_various_gamma.png", transparent = False, bbox_inches = 'tight', pad_inches = 0)
-    plt.savefig("flutterVelocityVsBeta_various_alpha.png", transparent = False, bbox_inches = 'tight', pad_inches = 0)
+    #plt.savefig("flutterVelocityVsBeta_various_alpha.png", transparent = False, bbox_inches = 'tight', pad_inches = 0)
+    plt.savefig("flutterVelocityVsBeta_various_sigma.png", transparent = False, bbox_inches = 'tight', pad_inches = 0)
 
     plt.close()
 
     return None
 
-''' 
-    *******************************************************************************************************
-                                                  MAIN PROGRAM 
-    *******************************************************************************************************          
-''' 
+
 '''
-    
-     LINEAR ANALYSIS OF A CANTILEVERED PIPE CONVEYING FLUID
-  
+   ********************************************************************************************************************** 
+
+                           MAIN PROGRAM :  LINEAR ANALYSIS OF A CANTILEVERED PIPE CONVEYING FLUID
+
+   **********************************************************************************************************************  
 '''
 
 ### Parameters
@@ -1129,7 +1130,7 @@ beta_   = 0.2     # Mass ratio = (fluid)/(fluid + solid)
 gamma_  = 0.0     # Non-dimensionalized acceleration due to gravity
 alpha_  = 0.0   # Kelvin-Voigt viscoelasticity factor
 sigma_  = 0.0       # Non-dimensionalized external dissipation constant
-U       = 0.      # Non-dimensional flow velocity
+U       = 5.57      # Non-dimensional flow velocity
 
 ### Domain discretization
 xi = np.linspace(0, 1, 501)
@@ -1147,8 +1148,8 @@ U_array = np.linspace(0,20,301)
 #RootLocus.rootLocusScatter(U_array, modes_to_plot = 3, save_plot ='No')
 
 ### Variation of flutter flow velocity with mass ratio for a given set of parameters
-U_array = np.linspace(4.2,13.,21)
-#FlutterVelocityVsBeta.flutterVelocityVsBeta(U_array[:], save_plot='No', show_omega = 'No')
+U_array = np.linspace(4.9, 13.0, 101)
+#FlutterVelocityVsBeta.flutterVelocityVsBeta(U_array[:], save_plot='Yes', show_omega = 'No')
 
 
 ### Variation of flutter flow velocity with mass ratio for different gamma_
@@ -1161,7 +1162,7 @@ U_array = np.linspace(4.2,13.,21)
 '''
 
 # Non-dimensional flow velocity
-U = 5.6
+U = 5.57
 
 # Time array
 t = np.linspace(0, 10, 501)
@@ -1171,10 +1172,10 @@ displacement_ic = 0.1*ModeShape.phi(xi, 1)
 velocity_ic = np.zeros(xi.shape)
 
 # Plot dynamic response
-#Response.plotResponse(t, displacement_ic, velocity_ic, fps=5, velocity_hammer_input = 'No', velocity_hammer_magnitude = 0.2, record_video = 'Yes')
+Response.plotResponse(t, displacement_ic, velocity_ic, fps=5, velocity_hammer_input = 'Yes', velocity_hammer_magnitude = 0.2, record_video = 'Yes')
 
 # Plot point displacement history
-Response.pointHistoryAndEnergy(t, displacement_ic, velocity_ic, point = -1, save_plot = 'Yes',  velocity_hammer_input = 'Yes', velocity_hammer_magnitude = 0.2)
+#Response.pointHistoryAndEnergy(t, displacement_ic, velocity_ic, point = -1, save_plot = 'Yes',  velocity_hammer_input = 'Yes', velocity_hammer_magnitude = 0.2)
 
 ########### Test integrate
 
