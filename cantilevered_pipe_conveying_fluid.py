@@ -1,15 +1,12 @@
-#!/usr/bin/env python3
+## @package cantilevered_pipe_conveying_fluid
+#  Dynamics of cantilevered pipe conveying fluid
+#  @author G R Krishna Chand Avatar, MTech (Aero) 3rd sem
+
+
+# !/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
 
-    Dynamics of cantilevered pipe conveying fluid
-
-AE255 Aeroelasticity term paper 
-
-@author: G R Krishna Chand Avatar, MTech (Aero) 3rd sem
-
-"""
-###################################### LOADING PACKAGES  ###########################################
+# ##################################### LOADING PACKAGES  ###########################################
 
 import os                        # for calling system functions in Ubuntu
 import numpy as np               # for Numerical Python library
@@ -21,9 +18,9 @@ import control.matlab            # for state-space modelling and time response (
 from celluloid import Camera     # for animation
 
 
-################################# Done LOADING PACKAGES  ###########################################
+# ################################ Done LOADING PACKAGES  ###########################################
 
-''' Font size control abd global plot parameters '''
+# Font size control and global plot parameters
 SMALL_SIZE = 13
 MEDIUM_SIZE = 20
 BIGGER_SIZE = 22
@@ -41,39 +38,44 @@ plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 #plt.rc('font',**{'family':'serif','serif':['Times']})
 #plt.rc('text', usetex=True)
 
+
 line_width = 2
 line_style = ['--', '-.', '-']
 marker = ['*', 'd', 'o', '+']
 legend = ["Coarse", "Medium", "Fine"] 
 colour = ["red", "blue", "green", "magenta", "brown"]
 
-'''
-Class to perform integration for various coefficients 
-'''
+
+
+## Class containing various integration procedures 
+#  Contains both `functional-based and value-based numerical integration procedures
 class Integrator:
     
-    # Init method or constructor   
+    ## Init method or constructor   
     def __init__(self, name):  
         self.name = name  
             
-    # Numerically integrate 
+    ## Print something again
     def printAgain():
         print("I also work")
         
-    # print something
+    ## Print something
     def printMe():
         print("This class works")
         Integrator.printAgain()
         return None
     
-    # integrate a function
+    ## Integrate a function over a given interval
+    # @param f1 Function to be integrated
     def integrateFunc(f1, i = 0,  lowerLim = 0, upperLim = 1):
-        
+
         # integrate
         val, err = integrate.quadrature(f1, lowerLim, upperLim, args = i, tol=1e-9, rtol=1e-10, maxiter=100) # , limit=100, epsabs=1e-10)
         return val
         
-    # numerically integrate product of two functions
+    ## Integrate product of two functions over a given interval
+    # @param f1 First function
+    # @param f2 Second function
     def integrateTwoFunc(f1, f2, i, j, lowerLim = 0, upperLim = 1):
                 
         # wrapper function: return product of two functions
@@ -85,7 +87,9 @@ class Integrator:
         val, err = integrate.quadrature(twoFunc, lowerLim, upperLim, args=(i,j), tol=1e-9, rtol=1e-10, maxiter=150)
         return val
     
-    # numerically integrate product of three functions
+    ## Integrate product of three functions over a given interval
+    # @param f1 First function
+    # @param f2 Second function
     def integrateThreeFunc(f1, f2, i, j, lowerLim = 0, upperLim = 1):
              
         # lambda function
@@ -99,8 +103,9 @@ class Integrator:
         val, err = integrate.quadrature(threeFunc, lowerLim, upperLim, args=(i,j), tol=1e-9, rtol=1e-10, maxiter=100)
         return val
     
-    # numerically integrate a number array  using 
-    # trapezoidal, simpson or rhomberg method
+    ## Numerically integrate an array of float numbers using trapezoidal, simpson or rhomberg method
+    # @param y Array of numbers to be integrated
+    # @param x Array over which integration is desired
     def numericalIntegration(y, x, scheme = 'simps'):
         
         if (scheme == 'trapz'):
@@ -111,25 +116,24 @@ class Integrator:
         
         if (scheme == 'rhom'):
             return integrate.rhom(t, dx = x[1] - x[0])
-           
-        
-'''
-Class to determine  coefficients
- 
-    * Stationary damping and stiffness matrices: C_ij, K_ij
-    * Analytically determined: b_ij, c_ij, d_ij
-    * Numerically determined: alpha_ijkl, beta_ijkl, gamma_ijkl
-    
-'''
+
+## Global variable: number of integration points
+# Number of integration points
 numIntegrationPoints = 2**8 + 1 # number of integration points
 
+## Class to determine various coefficients
+#  The following coefficients are determined:
+#   \li \c  Stationary damping and stiffness matrices: \f$C_{ij}, K_{ij}\f$
+#   \li \c  Analytically determined: \f$b_{ij}\f$, \f$c_{ij}\f$, \f$d_{ij}\f$
+#   \li \c  Numerically determined: \f$\alpha_{ijkl}\f$, \f$\beta_{ijkl}\f$, \f$\gamma_{ijkl}\f$
 class Coefficients:
     
     global modalEig
     global normalizationFactor
     global numIntegrationPoints # number of integration points
     
-    # C_{ij} = \alpha \lambda_j^4 \delta_{ij} + 2\sqrt{\beta} u_0 b_{ij}
+    ## To determine component for damping matrix 
+    # \f$C_{ij} = \alpha \lambda_j^4 \delta_{ij} + 2\sqrt{\beta} U b_{ij}\f$
     def C(i, j):
         global alpha_        # Kelvin-Voigt viscoelasticity factor
         global beta_         # Mass ratio
@@ -144,7 +148,8 @@ class Coefficients:
                 return 0
         return (sigma_ + alpha_ * modalEig[j]**4)*kronecker(i, j) + 2.0*np.sqrt(beta_)*U*Coefficients.b(i, j)
     
-    # K_{ij} = \lambda_j^4 \delta_{ij} + (U^2 - \gamma) c_{ij} + \gamma (d_{ij} + b_{ij})
+    ## To determine component for stiffness matrix
+    # \f$K_{ij} = \lambda_j^4 \delta_{ij} + (U^2 - \gamma) c_{ij} + \gamma (d_{ij} + b_{ij})\f$
     def K(i, j):
         global U          # Non-dimensionalized flow velocity
         global gamma_     # Non-dimensionalized acceleration due to gravity
@@ -157,7 +162,7 @@ class Coefficients:
                 return 0
         return modalEig[j]**4 * kronecker(i, j) + (U**2 - gamma_)*Coefficients.c(i, j) + gamma_*(Coefficients.d(i, j) + Coefficients.b(i, j))
     
-    # b_{ij} = \int_0^1 \phi_i \phi'_j d\xi
+    ## To determine coefficient \f$b_{ij} = \int_0^1 \phi_i \phi_j' d\xi\f$
     def b(i, j):
         #return Integrator.integrateTwoFunc(ModeShape.phi, ModeShape.dPhi, i, j)
         # Exact expressions
@@ -166,7 +171,7 @@ class Coefficients:
         else:
             return 2.0
     
-    # c_{ij} = \int_0^1 \phi_i \phi''_j d\xi
+    ## To determine coefficient \f$c_{ij} = \int_0^1 \phi_i \phi_j'' d\xi\f$
     def c(i, j):
         #return Integrator.integrateTwoFunc(ModeShape.phi, ModeShape.d2Phi, i, j)
     
@@ -177,8 +182,8 @@ class Coefficients:
             return 4.0*(modalEig[j]*sigma(modalEig[j]) - modalEig[i]*sigma(modalEig[i]))/((-1.0)**(i+j) - (modalEig[i]/modalEig[j])**2)
         else:
             return modalEig[j]*sigma(modalEig[j])*(2.0 - modalEig[i]*sigma(modalEig[i]))
-  
-    # d_{ij} = \int_0^1 \xi \phi_i \phi''_j d\xi
+
+    ## To determine coefficient \f$d_{ij} = \int_0^1 \xi \phi_i \phi_j'' d\xi\f$
     def d(i, j):
         #return Integrator.integrateThreeFunc(ModeShape.phi, ModeShape.d2Phi, i, j)    
         
@@ -192,7 +197,7 @@ class Coefficients:
         else:
             return modalEig[j]*sigma(modalEig[j])*(2.0 - modalEig[i]*sigma(modalEig[i]))/2.0 # c_{ii}/2
     
-    ## \alpha_{ijkl}
+    ## To determine coefficient \f$\alpha_{ijkl}\f$
     def alpha(i, j, k, l):
         
         global U         # Non-dimensionalized flow velocity
@@ -216,8 +221,8 @@ class Coefficients:
         thirdTermVal = gamma * Integrator.numericalIntegration(thirdTerm, xi, scheme = 'rhom')
         
         return (firstTermVal + secondTermVal + thirdTermVal)
-        
-    ## \beta_{ijkl}
+    
+    ## To determine coefficient \f$\beta_{ijkl}\f$  
     def beta(i, j, k, l):
         global U         # Non-dimensionalized flow velocity
         global beta_     # Mass ratio
@@ -232,7 +237,7 @@ class Coefficients:
         
         return (2.0*U*np.sqrt(beta_)*Integrator.numericalIntegration(term, xi, scheme = 'rhom'))
     
-    ## \gamma_{ijkl}
+    ## To determine coefficient \f$\gamma_{ijkl}\f$
     def gamma(i, j, k, l):
         
         xi = np.linspace(0, 1, numIntegrationPoints)
@@ -253,64 +258,84 @@ class Coefficients:
         return Integrator.numericalIntegration(term, xi, scheme = 'rhom')
 
 
-    #### Coefficients of the modal equation for cantilever beam: \ddot{q}_s = \Lambda_s q_s  (\lambda_s is s^th modal frequency)        
-    
-'''
-Class for mode shapes and their derivatives
+    # Coefficients of the modal equation for cantilever beam: \ddot{q}_s = \Lambda_s q_s  (\lambda_s is s^th modal frequency) 
 
-'''
+
+## Class to define modal shape functions and their derivatives
+# Contains function definition of cantilever beam modal shape functions and their derivatives
 
 class ModeShape:
     
+    ## Global variables
+    # @param modalEig Modal eigenvalues
+    # @param normalizationFactor Normalization factors for the modal shape functions
     global modalEig
     global normalizationFactor
     
-    # \phi (x) to be normalized
+    ## Unnormalized cantilever beam modal shape functions \f$\phi (x) \f$
+    # @param x Spatial domain of the cantilevered pipe
+    # @param modeNo Mode number (starts at 1)
     def normalizePhi(x, modeNo):
         sigma = (np.sinh(modalEig[modeNo]) - np.sin(modalEig[modeNo]))/(np.cosh(modalEig[modeNo]) + np.cos(modalEig[modeNo]))
         val = np.cosh(modalEig[modeNo]*x) - np.cos(modalEig[modeNo]*x) - sigma*(np.sinh(modalEig[modeNo]*x) - np.sin(modalEig[modeNo]*x))
         return val
+
+    ##  Function for Normalization of the cantilever beam modal shape functions
+    # Normalize modal shapes such that \f$\int_0^1 (\phi_i (x))^2 dx = 1\f$
+    def normalizeModeShapes():
+        global normalizationFactor
+        global modalEig
+    
+        for i in range(1,modalEig.size):
+          val = Integrator.integrateTwoFunc(ModeShape.normalizePhi, ModeShape.normalizePhi, i, i)
+          normalizationFactor[i] = np.sqrt(val)
+        return None
            
-    # \phi (x)
+    ## Modal shape function \f$\phi (x)\f$
+    # @param x Spatial domain of the cantilevered pipe
+    # @param modeNo Mode number (starts at 1)
     def phi(x, modeNo):
         sigma = (np.sinh(modalEig[modeNo]) - np.sin(modalEig[modeNo]))/(np.cosh(modalEig[modeNo]) + np.cos(modalEig[modeNo]))
         val = np.cosh(modalEig[modeNo]*x) - np.cos(modalEig[modeNo]*x) - sigma*(np.sinh(modalEig[modeNo]*x) - np.sin(modalEig[modeNo]*x))
         return val/normalizationFactor[modeNo]
     
-    # \phi' (x)
+    ## First derivative of modal shape function \f$\phi' (x)\f$
+    # @param x Spatial domain of the cantilevered pipe
+    # @param modeNo Mode number (starts at 1)
     def dPhi(x, modeNo):
         sigma = (np.sinh(modalEig[modeNo]) - np.sin(modalEig[modeNo]))/(np.cosh(modalEig[modeNo]) + np.cos(modalEig[modeNo]))
         val = np.sinh(modalEig[modeNo]*x) + np.sin(modalEig[modeNo]*x) - sigma*(np.cosh(modalEig[modeNo]*x) - np.cos(modalEig[modeNo]*x))
         return modalEig[modeNo]*val/normalizationFactor[modeNo]
     
-    # \phi'' (x)
+    ## Second derivative of modal shape function \f$\phi'' (x)\f$
+    # @param x Spatial domain of the cantilevered pipe
+    # @param modeNo Mode number (starts at 1)
     def d2Phi(x, modeNo):
         sigma = (np.sinh(modalEig[modeNo]) - np.sin(modalEig[modeNo]))/(np.cosh(modalEig[modeNo]) + np.cos(modalEig[modeNo]))
         val = np.cosh(modalEig[modeNo]*x) + np.cos(modalEig[modeNo]*x) - sigma*(np.sinh(modalEig[modeNo]*x) + np.sin(modalEig[modeNo]*x))
         return (modalEig[modeNo]**2)*val/normalizationFactor[modeNo]
    
-    # \phi''' (x)
+    ## Third derivative of modal shape function \f$\phi' (x)\f$
+    # @param x Spatial domain of the cantilevered pipe
+    # @param modeNo Mode number (starts at 1)
     def d3Phi(x, modeNo):
         sigma = (np.sinh(modalEig[modeNo]) - np.sin(modalEig[modeNo]))/(np.cosh(modalEig[modeNo]) + np.cos(modalEig[modeNo]))
         val = np.sinh(modalEig[modeNo]*x) - np.sin(modalEig[modeNo]*x) - sigma*(np.cosh(modalEig[modeNo]*x) + np.cos(modalEig[modeNo]*x))
         return (modalEig[modeNo]**3)*val/normalizationFactor[modeNo]
     
-    # \phi'''' (x)
+    ## Fourth derivative of modal shape function \f$\phi' (x)\f$
+    # @param x Spatial domain of the cantilevered pipe
+    # @param modeNo Mode number (starts at 1)
     def d4Phi(x, modeNo):
         sigma = (np.sinh(modalEig[modeNo]) - np.sin(modalEig[modeNo]))/(np.cosh(modalEig[modeNo]) + np.cos(modalEig[modeNo]))
         val = np.cosh(modalEig[modeNo]*x) - np.cos(modalEig[modeNo]*x) - sigma*(np.sinh(modalEig[modeNo]*x) - np.sin(modalEig[modeNo]*x))
         return (modalEig[modeNo]**4)*val/normalizationFactor[modeNo]
 
-    # identity: returns the input
-    def identity(x, modeNo):
+    ## Identity function returns the input
+    def identity(x, modeNo=1):
         return x
 
-'''
-  Function for NORMALIZATION of the MODAL SHAPES for the cantilever beam
-  
-'''
-# Non-dimensional modal eigenvalues for a cantilever beam: \lambda 
-#     from Meirovitch's Fundamentals of vibrations (page no: 420)
+## Non-dimensional modal eigenvalues for a cantilever beam: \f$\lambda\f$
 modalEig = np.zeros(16)
 modalEig[1] = 1.8751; modalEig[2] = 4.69409; modalEig[3] = 7.85476; modalEig[4] = 10.9955; modalEig[5] = 14.1372;
 modalEig[6] = 17.2788; modalEig[7] = 20.4204; modalEig[8] = 23.5619; modalEig[9] = 26.7035; modalEig[10] = 29.8451;
@@ -320,25 +345,16 @@ normalizationFactor = np.zeros(modalEig.size)
 normalizationFactor = np.array([0., 0.99999892, 0.99999988, 1.00000016, 0.99999815, 1.00000112, 1.00000117, 1.00000117, 
                                 0.99999906, 0.99999903, 1.00000049, 1.00016218, 1.00232238, 0.9922316,  0.96260839, 0.91879675])
 
-# normalize nodal shapes such that \int_0^1 (\phi_i (x))^2 dx = 1
-def normalizeModeShapes():
-    global normalizationFactor
-    
-    for i in range(1,modalEig.size):
-        val = Integrator.integrateTwoFunc(ModeShape.normalizePhi, ModeShape.normalizePhi, i, i)
-        normalizationFactor[i] = np.sqrt(val)
-    return None
 
-# Normalize modes compulsarily before computations are done
-#normalizeModeShapes()
 
-'''
-   Class for complete response
-'''
-
+## Class for time-domain response of the cantilevered pipe system
+# Contains the following functions
+#  \li Superposition of modal responses
+#  \li Complete response
+#  \li Tip displacement history and kinetic energy dynamics of the complete system
 class Response:
     
-    # Superposition of modes
+    ## Superposition of modal responses
     def superpose(q):
         
         global xi # Domain description
@@ -350,7 +366,10 @@ class Response:
            
         return res
     
-    # Plot response
+    ## Plot and record animation of the complete response
+    # @param t Time array for which simulation has to be done
+    # @param displacement_ic Displacement initial conditions
+    # @param velocity_ic Velocity initial conditions
     def plotResponse(t, displacement_ic, velocity_ic, fps=10, velocity_hammer_input = 'No', velocity_hammer_magnitude = 0.1, record_video = 'No'):  # fps = frames per second
         
         global N  # No of modes used for approximation
@@ -461,8 +480,10 @@ class Response:
 
         return None
 
-    ### Record and plot displacement time history at a point
-
+    ## Record and plot displacement time history at a point and the kinet
+    # @param t Time array for which simulation has to be done
+    # @param displacement_ic Displacement initial conditions
+    # @param velocity_ic Velocity initial conditions
     def pointHistoryAndEnergy(t, displacement_ic, velocity_ic, point = -1, save_plot = 'No', velocity_hammer_input = 'No', velocity_hammer_magnitude = 0.1): 
         
         global N  # No of modes used for approximation
@@ -580,18 +601,14 @@ class Response:
 
         return None
 
-'''
-  
-   Class for ROOT LOCUS:  to determine variation of pole frequencies for a given set of parameters
 
-'''
+
+## Class for root locus 
+# To determine variation of complex frequencies (poles) for a given set of parameters \f$\beta,~\sigma,~\alpha,~\gamma\f$
 
 class RootLocus:
     
-    '''
-       Root locus function
-    '''
-    
+    ## Function for determining and plottting root locus
     def rootLocus(U_array, modes_to_plot = 4, save_plot = 'No', returnEigenvalues = 'No'):  # modes_to_plot: Number of modes to plot
         
         global N         # No of modes used for approximation
@@ -706,6 +723,7 @@ class RootLocus:
         else:  
             return None
 
+    ## CRUDE function for determining and root locus scatter plot
     def rootLocusScatter(U_array, modes_to_plot = 4, save_plot = 'No', returnEigenvalues = 'No'):  # modes_to_plot: Number of modes to plot
         
         global N         # No of modes used for approximation
@@ -804,11 +822,8 @@ class RootLocus:
         else:  
             return None
 
-    '''
-      Determine flutter flow velocity : check when the imaginary part becomes negative and return the corresponding U
-      
-    '''
     
+    ##  Function to determine flutter flow velocity: check when the imaginary part becomes negative and return the corresponding U
     def determineFlutterSpeed(freqArray, U_array):
         
         # Initialize
@@ -839,16 +854,12 @@ class RootLocus:
             print("*****************************************************")
     
         return (flutterMode, flutterIndices, flutterVelocity)
+        
 
-'''
- 
-   Class for Variation of critical velocity with beta :
-       Class to determine variation of critical flow velocity with mass ratio for a given set of parameters
- 
-'''
-
+##  Class for variation of critical flow velocity with mass ratio \f$\beta\f$ for a given set of parameters
 class FlutterVelocityVsBeta:
 
+    ##  Function to plot the variation of critical flow velocity with mass ratio \f$\beta\f$ for a given set of parameters
     def flutterVelocityVsBeta(U_array, save_plot = 'No', show_omega = 'No'):
         
         global N         # No of modes used for approximation
@@ -1004,11 +1015,7 @@ class FlutterVelocityVsBeta:
        
         return None
 
-    '''
-      Determine flutter flow velocity : check when the imaginary part becomes negative and return the corresponding U
-      
-    '''
-    
+    ## Function to determine flutter flow velocity : check when the imaginary part becomes negative and return the corresponding U
     def determineFlutterBeta(freqArray, beta_array):
         
         # Initialize 
@@ -1037,15 +1044,10 @@ class FlutterVelocityVsBeta:
     
         return (flutterBeta, flutterOmega)
 
-'''
 
-    UTILITY FUNCTIONS
+## UTILITY FUNCTIONS
 
-'''
-
-'''
-  Step-wise "ascending" order for a mode
-'''
+##  Function for step-wise "ascending" order for a mode
 def closestNeighbourMapping(previous, current):
    
     # Minimum distance function
@@ -1054,10 +1056,10 @@ def closestNeighbourMapping(previous, current):
         indexTemp = 0
 
         for i in range(1,len(y)):
-        	dist = np.sqrt((x.real - y[i].real)**2 + (x.imag - y[i].imag)**2)
-        	if (dist < mindist):
-        		mindist =  dist
-        		indexTemp = i
+            dist = np.sqrt((x.real - y[i].real)**2 + (x.imag - y[i].imag)**2)
+            if (dist < mindist):
+                mindist =  dist
+                indexTemp = i
 
         return indexTemp
     
@@ -1066,18 +1068,15 @@ def closestNeighbourMapping(previous, current):
     current = list(current)
 
     for i in range(temp.size):
-    	ind = distance(previous[i], current)
-    	temp[i] = current[ind]
-    	del(current[ind])
+        ind = distance(previous[i], current)
+        temp[i] = current[ind]
+        del(current[ind])
 
     return temp
 
 
-'''
-   Plot variation of beta v/s flutter flow velocity with gamma (gravitational parameter)
 
-'''
-
+##  Function to plot variation of \f$\beta\f$ v/s flutter flow velocity \f$U\f$ 
 def plotBetaVsVelocity():
 
     #global sigma_
