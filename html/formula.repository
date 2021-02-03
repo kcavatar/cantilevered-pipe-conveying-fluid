@@ -1,0 +1,21 @@
+\_form#0=41x14:$C_{ij}, K_{ij}$
+\_form#1=13x14:$b_{ij}$
+\_form#2=13x10:$c_{ij}$
+\_form#3=14x14:$d_{ij}$
+\_form#4=24x10:$\alpha_{ijkl}$
+\_form#5=24x14:$\beta_{ijkl}$
+\_form#6=24x10:$\gamma_{ijkl}$
+\_form#7=8x10:$\lambda$
+\_form#8=60x13:$\beta,~\sigma,~\alpha,~\gamma$
+\_form#9=9x13:$\beta$
+\_form#10=10x10:$U$
+\_form#11=131x16:$C_{ij} = \alpha \lambda_j^4 \delta_{ij} + 2\sqrt{\beta} U b_{ij}$
+\_form#12=215x16:$K_{ij} = \lambda_j^4 \delta_{ij} + (U^2 - \gamma) c_{ij} + \gamma (d_{ij} + b_{ij})$
+\_form#13=84x19:$b_{ij} = \int_0^1 \phi_i \phi_j' d\xi$
+\_form#14=84x19:$c_{ij} = \int_0^1 \phi_i \phi_j'' d\xi$
+\_form#15=91x19:$d_{ij} = \int_0^1 \xi \phi_i \phi_j'' d\xi$
+\_form#16=23x14:$\phi (x) $
+\_form#17=94x19:$\int_0^1 (\phi_i (x))^2 dx = 1$
+\_form#18=23x14:$\phi (x)$
+\_form#19=26x14:$\phi' (x)$
+\_form#20=30x14:$\phi'' (x)$
