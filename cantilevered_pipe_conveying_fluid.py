@@ -1,10 +1,10 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 ## @package cantilevered_pipe_conveying_fluid
 #  Dynamics of cantilevered pipe conveying fluid
 #  @author G R Krishna Chand Avatar, MTech (Aero) 3rd sem
 
-
-# !/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 # ##################################### LOADING PACKAGES  ###########################################
 
@@ -1171,10 +1171,10 @@ displacement_ic = 0.1*ModeShape.phi(xi, 1)
 velocity_ic = np.zeros(xi.shape)
 
 # Plot dynamic response
-Response.plotResponse(t, displacement_ic, velocity_ic, fps=5, velocity_hammer_input = 'Yes', velocity_hammer_magnitude = 0.2, record_video = 'Yes')
+#Response.plotResponse(t, displacement_ic, velocity_ic, fps=5, velocity_hammer_input = 'Yes', velocity_hammer_magnitude = 0.2, record_video = 'Yes')
 
 # Plot point displacement history
-#Response.pointHistoryAndEnergy(t, displacement_ic, velocity_ic, point = -1, save_plot = 'Yes',  velocity_hammer_input = 'Yes', velocity_hammer_magnitude = 0.2)
+Response.pointHistoryAndEnergy(t, displacement_ic, velocity_ic, point = -1, save_plot = 'Yes',  velocity_hammer_input = 'Yes', velocity_hammer_magnitude = 0.2)
 
 ########### Test integrate
 
