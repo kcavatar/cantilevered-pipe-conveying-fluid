@@ -1,0 +1,25 @@
+\BOOKMARK [0][-]{chapter.1}{A brief introduction}{}% 1
+\BOOKMARK [0][-]{chapter.2}{Hamilton's principle for equation of motion for a cantilevered pipe conveying fluid}{}% 2
+\BOOKMARK [1][-]{section.2.1}{Assumptions}{chapter.2}% 3
+\BOOKMARK [1][-]{section.2.2}{Geometric details}{chapter.2}% 4
+\BOOKMARK [1][-]{section.2.3}{Hamiltonian derivation}{chapter.2}% 5
+\BOOKMARK [0][-]{chapter.3}{Linear governing equation for small transverse displacement}{}% 6
+\BOOKMARK [1][-]{section.3.1}{Derivation of the equation of motion}{chapter.3}% 7
+\BOOKMARK [2][-]{subsection.3.1.1}{Kinetic energy of the system}{section.3.1}% 8
+\BOOKMARK [2][-]{subsection.3.1.2}{Potential energy of the system}{section.3.1}% 9
+\BOOKMARK [2][-]{subsection.3.1.3}{Expanding variational terms}{section.3.1}% 10
+\BOOKMARK [2][-]{subsection.3.1.4}{Equation of motion}{section.3.1}% 11
+\BOOKMARK [2][-]{subsection.3.1.5}{Incorporation of dissipative effects}{section.3.1}% 12
+\BOOKMARK [1][-]{section.3.2}{Non-dimensional equation of motion}{chapter.3}% 13
+\BOOKMARK [1][-]{section.3.3}{Transformation into modal equation form}{chapter.3}% 14
+\BOOKMARK [2][-]{subsection.3.3.1}{Determining system response}{section.3.3}% 15
+\BOOKMARK [0][-]{chapter.4}{Results: Linear analysis of the cantilevered pipe conveying fluid}{}% 16
+\BOOKMARK [1][-]{section.4.1}{Effect of mass ratio }{chapter.4}% 17
+\BOOKMARK [2][-]{subsection.4.1.1}{Variation of critical flow velocity with mass ratio}{section.4.1}% 18
+\BOOKMARK [1][-]{section.4.2}{Effect of gravitational parameter}{chapter.4}% 19
+\BOOKMARK [1][-]{section.4.3}{Effect of dissipation}{chapter.4}% 20
+\BOOKMARK [2][-]{subsection.4.3.1}{External dissipation }{section.4.3}% 21
+\BOOKMARK [2][-]{subsection.4.3.2}{Internal dissipation }{section.4.3}% 22
+\BOOKMARK [1][-]{section.4.4}{Response to velocity impulse input}{chapter.4}% 23
+\BOOKMARK [0][-]{chapter.5}{Conclusion}{}% 24
+\BOOKMARK [0][-]{chapter.1}{Derivation of cantilever beam modal functions}{}% 25
