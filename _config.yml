@@ -1,3 +1,7 @@
 theme: jekyll-theme-leap-day
 title: Linear dynamics of a cantilevered pipe conveying fluid
+<<<<<<< HEAD
 description: A Python package developed by G R Krishna Chand Avatar 
+=======
+description: A Python package developed by G R Krishna Chand Avatar 
+>>>>>>> aacacc0d359598d2b2e6ee872cc8480de4471512
